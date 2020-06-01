@@ -284,6 +284,12 @@ Target.create "Lint" <| skipOn "no-lint" (fun _ ->
     |> Seq.iter checkResult
 )
 
+Target.create "Tests" (fun _ ->
+    if !! "tests/*.fsproj" |> Seq.isEmpty
+    then Trace.tracefn "There are no tests yet."
+    else DotnetCore.runOrFail "run" "tests"
+)
+
 Target.create "Run" (fun _ ->
     let server = async {
         serverPath |> DotnetCore.runOrFail "watch run"
@@ -331,6 +337,7 @@ open Fake.Core.TargetOperators
     ==> "InstallClient"
     ==> "Build"
     ==> "Lint"
+    ==> "Tests"
     ==> "Bundle"
 
 "SafeClean"
