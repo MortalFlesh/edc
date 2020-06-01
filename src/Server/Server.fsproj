@@ -11,7 +11,38 @@
 
     <ItemGroup>
         <None Include="paket.references" />
+
+        <Compile Include="..\Shared\Utils.fs" />
         <Compile Include="..\Shared\Shared.fs" />
+
+        <!-- Internal libraries -->
+        <Compile Include="ErrorHandling/Result.fs" />
+        <Compile Include="ErrorHandling/Option.fs" />
+        <Compile Include="Environment/Environment.fs" />
+        <Compile Include="State/State.fs" />
+
+        <!-- Application common -->
+        <Compile Include="Application/Utils.fs" />
+
+        <!-- Profiler -->
+        <Compile Include="Profiler/Errors.fs" />
+        <Compile Include="Profiler/Queries.fs" />
+        <Compile Include="Profiler/Profiler.fs" />
+
+        <!-- Security -->
+        <Compile Include="Security/Token.fs" />
+        <Compile Include="Security/User.fs" />
+
+        <!-- Api -->
+
+        <!-- Dto -->
+        <Compile Include="Dto.fs" />
+
+        <!-- Application & Security -->
+        <Compile Include="Application/Application.fs" />
+
+        <Compile Include="Security/Authorization.fs" />
+
         <Compile Include="Server.fs" />
     </ItemGroup>
 

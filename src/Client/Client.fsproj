@@ -13,9 +13,36 @@
         <None Include="index.html" />
         <None Include="paket.references" />
         <None Include="style.scss" />
+        <Compile Include="..\Shared\Utils.fs" />
         <Compile Include="..\Shared\Shared.fs" />
 
-        <Compile Include="Client.fs" />
+        <Compile Include="Component/Profiler/Model.fs" />
+        <Compile Include="Component/Profiler/Profiler.fs" />
+
+        <Compile Include="Types.fs" />
+        <Compile Include="LocalStorage.fs" />
+        <Compile Include="User.fs" />
+        <Compile Include="Api.fs" />
+
+        <!-- Stateless Components -->
+        <Compile Include="Component/Component.fs" />
+
+        <!-- Stateful Components -->
+        <Compile Include="Page/Login/Model.fs" />
+        <Compile Include="Page/MyEdcSets/Model.fs" />
+
+        <!-- App model -->
+        <Compile Include="Model.fs" />
+
+        <!-- Pages -->
+
+        <!-- Login Page -->
+        <Compile Include="Page/Login/View.fs" />
+
+        <!-- MyEdcSets Page -->
+        <Compile Include="Page/MyEdcSets/View.fs" />
+
+        <Compile Include="View.fs" />
     </ItemGroup>
 
     <Import Project="..\..\.paket\Paket.Restore.targets" />
