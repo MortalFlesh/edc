@@ -34,7 +34,7 @@ module Server =
       Remoting.createApi()
       |> Remoting.withRouteBuilder Route.builder
       |> Remoting.buildProxy<ICounterApi>
-let initialCounter = Server.api.initialCounter
+let initialCounter = Server.api.InitialCounter
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
@@ -65,7 +65,7 @@ let safeComponents =
         span [ ]
            [ a [ Href "https://github.com/SAFE-Stack/SAFE-template" ]
                [ str "SAFE  "
-                 str Version.template ]
+                 str System.AssemblyVersionInformation.AssemblyMetadata_SafeTemplateVersion ]
              str ", "
              a [ Href "https://saturnframework.github.io" ] [ str "Saturn" ]
              str ", "
@@ -83,7 +83,7 @@ let safeComponents =
 
     span [ ]
         [ str "Version "
-          strong [ ] [ str Version.app ]
+          strong [ ] [ str System.AssemblyVersionInformation.AssemblyVersion ]
           str " powered by: "
           components ]
 

@@ -22,7 +22,7 @@ type ToolDir =
     | Local of string
 
 // ========================================================================================================
-// === F# / SAFE app fake build =================================================================== 1.0.0 =
+// === F# / SAFE app fake build =================================================================== 1.1.0 =
 // --------------------------------------------------------------------------------------------------------
 // Options:
 //  - no-lint    - lint will be executed, but the result is not validated
@@ -41,7 +41,12 @@ type ToolDir =
 let project = "MF.EDC"
 let summary = "GUI for configuration of EDC sets"
 
-let release = ReleaseNotes.parse (System.IO.File.ReadAllLines "RELEASE_NOTES.md" |> Seq.filter ((<>) "## Unreleased"))
+let version =
+    "RELEASE_NOTES.md"
+    |> System.IO.File.ReadAllLines
+    |> Seq.tryPick (fun l -> if l.StartsWith "##" && not (l.Contains "Unreleased") then Some l else None)
+    |> Option.bind (fun l -> match Text.RegularExpressions.Regex.Match(l, @"(\d+\.\d+\.\d+){1}") with m when m.Success -> Some m.Value | _ -> None)
+    |> Option.defaultValue "0.0.0"
 let gitCommit = Information.getCurrentSHA1(".")
 let gitBranch = Information.getBranchName(".")
 
@@ -207,14 +212,14 @@ Target.create "AssemblyInfo" (fun _ ->
             AssemblyInfo.Title projectName
             AssemblyInfo.Product project
             AssemblyInfo.Description summary
-            AssemblyInfo.Version release.AssemblyVersion
-            AssemblyInfo.FileVersion release.AssemblyVersion
+            AssemblyInfo.Version version
+            AssemblyInfo.FileVersion version
             AssemblyInfo.InternalsVisibleTo "tests"
             AssemblyInfo.Metadata("gitbranch", gitBranch |> gitValue [ "GIT_BRANCH"; "branch" ])
             AssemblyInfo.Metadata("gitcommit", gitCommit |> gitValue [ "GIT_COMMIT"; "commit" ])
             AssemblyInfo.Metadata("buildNumber", "BUILD_NUMBER" |> envVar |> Option.defaultValue "-")
             AssemblyInfo.Metadata("createdAt", now.ToString("yyyy-MM-dd HH:mm:ss"))
-            AssemblyInfo.Metadata("SafeTemplateVersion", "1.19.0")
+            AssemblyInfo.Metadata("SafeTemplateVersion", "1.24.0")
         ]
 
     let getProjectDetails projectPath =

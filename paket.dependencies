@@ -5,7 +5,7 @@ group Server
 
     nuget FSharp.Core
     nuget Saturn
-    nuget Microsoft.AspNetCore.Authentication.JwtBearer 3.0.2 // pin for netcoreapp30
+    #nuget Microsoft.AspNetCore.Authentication.JwtBearer 3.0.2 // pin for netcoreapp30
     nuget Fable.Remoting.Giraffe ~> 3
 
 group Client
@@ -29,7 +29,6 @@ group Build
     storage: none
 
     nuget FSharp.Core
-    nuget Fake.Core.ReleaseNotes
     nuget Fake.Core.Target
     nuget Fake.DotNet.AssemblyInfoFile
     nuget Fake.DotNet.Cli

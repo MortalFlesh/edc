@@ -3,11 +3,14 @@ EDC Configurator
 
 > Web gui for create/manage EDC sets
 
+---
 ## SAFE Template
+
+> Created by `dotnet new SAFE --layout fulma-admin --communication remoting --deploy docker --js-deps npm`
 
 This template can be used to generate a full-stack web application using the [SAFE Stack](https://safe-stack.github.io/). It was created using the dotnet [SAFE Template](https://safe-stack.github.io/docs/template-overview/). If you want to learn more about the template why not start with the [quick start](https://safe-stack.github.io/docs/quickstart/) guide?
 
-## Install pre-requisites
+### Install pre-requisites
 
 You'll need to install the following pre-requisites in order to build SAFE applications
 
@@ -16,7 +19,7 @@ You'll need to install the following pre-requisites in order to build SAFE appli
 * [Node LTS](https://nodejs.org/en/download/) installed for the front end components.
 * If you're running on OSX or Linux, you'll also need to install [Mono](https://www.mono-project.com/docs/getting-started/install/).
 
-## Work with the application
+### Work with the application
 
 Before you run the project **for the first time only** you should install its local tools with this command:
 
@@ -35,7 +38,7 @@ dotnet fake build -t run
 You can use the included `Dockerfile` and `build.fsx` script to deploy your application as Docker container. You can find more regarding this topic in the [official template documentation](https://safe-stack.github.io/docs/template-docker/).
 
 
-## SAFE Stack Documentation
+### SAFE Stack Documentation
 
 You will find more documentation about the used F# components at the following places:
 
