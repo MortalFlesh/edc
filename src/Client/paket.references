@@ -2,9 +2,10 @@ group Client
     FSharp.Core
     Fable.Core
     Fable.Elmish.Debugger
-    Fable.Elmish.React
     Fable.Elmish.HMR
+    Fable.Elmish.React
+    Fable.FontAwesome.Free
     Fable.Remoting.Client
     Fulma
-    Fable.FontAwesome.Free
-
+    Fulma.Extensions.Wikiki.Tooltip
+    Thoth.Elmish.Debouncer
