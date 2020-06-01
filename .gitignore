@@ -1,0 +1,39 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Safe
+.fable/
+.fake/
+.vs/
+src/Client/public/js/
+.idea/
+*.orig
+*.DotSettings.user
+
+# Application
+deploy
+.env
+release.cmd
+release.sh
+AssemblyInfo.fs
+
+# Paket dependency manager
+.paket/
+packages/
+paket-files/
+node_modules/
+
+# Ionide
+.ionide/
+
+# FAKE - F# Make
+.fake/
