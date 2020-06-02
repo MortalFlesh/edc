@@ -29,6 +29,11 @@
         <Compile Include="Profiler/Queries.fs" />
         <Compile Include="Profiler/Profiler.fs" />
 
+        <!-- Domain -->
+        <Compile Include="Domain/Common.fs" />
+        <Compile Include="Domain/Items.fs" />
+        <Compile Include="Domain/Set.fs" />
+
         <!-- Security -->
         <Compile Include="Security/Token.fs" />
         <Compile Include="Security/User.fs" />
@@ -40,7 +45,6 @@
 
         <!-- Application & Security -->
         <Compile Include="Application/Application.fs" />
-
         <Compile Include="Security/Authorization.fs" />
 
         <Compile Include="Server.fs" />

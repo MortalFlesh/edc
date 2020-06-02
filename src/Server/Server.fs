@@ -17,11 +17,6 @@ open MF.EDC.Profiler
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 
-let tryGetEnv key =
-    match Environment.GetEnvironmentVariable key with
-    | x when String.IsNullOrWhiteSpace x -> None
-    | x -> Some x
-
 let publicPath = Path.GetFullPath "../Client/public"
 
 let currentApplication =

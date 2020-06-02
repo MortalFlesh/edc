@@ -44,22 +44,190 @@ module JWTToken =
 
 [<RequireQualifiedAccess>]
 module Dto =
+    open System
+
     module Login =
         type User = {
             Username: Username
             Token: JWTToken
         }
 
+    module Common =
+        //
+        // Size
+        //
+
+        [<Measure>] type Gram
+        [<Measure>] type Milimeter
+
+        type Weight = Weight of int<Gram>
+
+        type Dimensions = {
+            Heigh: int<Milimeter>
+            Width: int<Milimeter>
+            Depth: int<Milimeter>
+        }
+
+        type Size = {
+            Weight: Weight option
+            Dimensions: Dimensions option
+        }
+
+        //
+        // Product
+        //
+
+        type Price = {
+            Amount: float
+            Currency: string
+        }
+
+        type Ean = Ean of string
+
+        type Link = Link of string
+
+        type ProductInfo = {
+            Name: string
+            Price: Price
+            Ean: Ean option
+            Links: Link list
+        }
+
+        //
+        // Gallery
+        //
+
+        type Gallery = {
+            Images: Link list
+        }
+
+        //
+        // Common
+        //
+
+        type Id = Id of Guid
+
+        type OwnershipStatus =
+            | Own
+            | Wish
+            | Maybe
+            | Idea
+            | ToBuy
+            | ToSell
+            | Ordered
+
+        type Color = Color of string
+
+        type Tag = Tag of string
+
+        type CommonInfo = {
+            Name: string
+            Note: string option
+            Color: Color option
+            Tag: Tag list
+            Links: Link list
+            Price: Price option
+            Size: Size option
+            OwnershipStatus: OwnershipStatus
+            Product: ProductInfo option
+            Gallery: Gallery
+        }
+
+    module Items =
+        open Common
+
+        //
+        // Tools
+        //
+
+        type ToolInfo = {
+            Common: CommonInfo
+        }
+
+        type Tool =
+            | MultiTool of ToolInfo
+            | Knife of ToolInfo
+            | Gun of ToolInfo
+            | Other of ToolInfo
+
+        //
+        // Consumables
+        //
+
+        type ConsumableInfo = {
+            Common: CommonInfo
+        }
+
+        type Consumable =
+            | Food of ConsumableInfo
+            | Other of ConsumableInfo
+
+        //
+        // Items
+        //
+
+        type Item =
+            | Tool of Tool
+            | Container of Container
+            | Consumable of Consumable
+
+        //
+        // Containers
+        //
+
+        and Container =
+            | BagPack of ContainerInfo
+            | Organizer of ContainerInfo
+            | Pocket of ContainerInfo
+            | Panel of ContainerInfo
+            | Other of ContainerInfo
+
+        and ContainerInfo = {
+            Common: CommonInfo
+
+            Items: ItemInContainer list
+            ItemsSize: Size
+            TotalSize: Size
+        }
+
+        and ItemInContainer = {
+            Item: ItemEntity
+            Quantity: int
+        }
+
+        //
+        // Entities
+        //
+
+        and ItemEntity = {
+            Id: Id
+            Item: Item
+        }
+
+        type ContainerEntity = {
+            Id: Id
+            Container: Container
+        }
+
     module Edc =
-        type EdcSet = EdcSet of string
+        open Items
+
+        type EdcSetId = EdcSetId of string
 
         [<RequireQualifiedAccess>]
-        module EdcSet =
+        module EdcSetId =
             let parse = function
                 | null | "" -> None
-                | set -> Some (EdcSet set)
+                | set -> Some (EdcSetId set)
 
-            let value (EdcSet set) = set
+            let value (EdcSetId id) = id
+
+        type EDCSet = {
+            Id: EdcSetId
+            Name: string option
+            Description: string option
+            Inventory: ContainerEntity list
+        }
 
 //
 // Routing, etc.
@@ -139,6 +307,8 @@ module Profiler =
 //
 
 open Dto.Login
+open Dto.Items
+open Dto.Edc
 
 type AsyncResult<'Success, 'Error> = Async<Result<'Success, 'Error>>
 

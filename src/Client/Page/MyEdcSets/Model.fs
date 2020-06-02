@@ -6,9 +6,9 @@ open Shared
 open Shared.Dto.Edc
 
 type PageMyEdcModel = {
-    SelectedSet: EdcSet option
+    SelectedSet: EdcSetId option
 
-    Sets: EdcSet list
+    Sets: EdcSetId list
     SetsLoadingStatus: AsyncStatus
 }
 
@@ -18,13 +18,13 @@ type PageMyEdcModel = {
 
 type SetsAction =
     | RefreshSets
-    | SetsLoaded of EdcSet list
+    | SetsLoaded of EdcSetId list
     | SetsLoadedWithError of ErrorMessage
     | HideSetsLoadingStatus
 
 type PageMyEdcAction =
-    | InitPage of EdcSet option
-    | SelectSet of EdcSet option
+    | InitPage of EdcSetId option
+    | SelectSet of EdcSetId option
     | SetsAction of SetsAction
 
 type DispatchPageMyEdcAction = PageMyEdcAction -> unit

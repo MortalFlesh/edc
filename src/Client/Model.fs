@@ -16,7 +16,7 @@ open Shared.Dto.Edc
 
 type Page =
     | Login
-    | MyEdcSets of EdcSet option
+    | MyEdcSets of EdcSetId option
 
 [<RequireQualifiedAccess>]
 module Page =
@@ -33,7 +33,7 @@ module Page =
     let toPath =
         function
         | Login -> "login"
-        | MyEdcSets (Some set) -> sprintf "my-sets/%s" (set|> EdcSet.value)
+        | MyEdcSets (Some set) -> sprintf "my-sets/%s" (set|> EdcSetId.value)
         | MyEdcSets None -> "my-sets"
         >> (+) "#/"
 
@@ -41,7 +41,7 @@ module Page =
         oneOf [
             map Login (s "login")
 
-            map (EdcSet.parse >> MyEdcSets) (s "my-sets" </> str)
+            map (EdcSetId.parse >> MyEdcSets) (s "my-sets" </> str)
             map (MyEdcSets None) (s "my-sets")
         ]
 
