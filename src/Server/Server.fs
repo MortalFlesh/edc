@@ -55,8 +55,18 @@ module Api =
                 |> Dto.Deserialize.credentials
                 |> AsyncResult.ofResult <@> (CredentialsError.format >> ErrorMessage)
 
-            let! user =
-                ErrorMessage "Not implemented yet" |> AsyncResult.ofError
+            let user = {
+                Username = credentials.Username
+                Token =
+                    JWTToken.create
+                        currentApplication.Instance
+                        currentApplication.TokenKey
+                        [
+                            CustomItem.String (UserCustomData.Username, credentials.Username |> Username.value)
+                            CustomItem.String (UserCustomData.DisplayName, credentials.Username |> Username.value)
+                            CustomItem.Strings (UserCustomData.Groups, [])
+                        ]
+            }
 
             return user |> Dto.Serialize.user
         }
