@@ -10,7 +10,7 @@ open Shared.Dto.Edc
 type PageItemsModel = {
     ItemDetail: Id option
 
-    Items: Item list
+    Items: ItemEntity list
     ItemsLoadingStatus: AsyncStatus
 }
 
@@ -20,7 +20,7 @@ type PageItemsModel = {
 
 type ItemsAction =
     | LoadItems
-    | ItemsLoaded of Item list
+    | ItemsLoaded of ItemEntity list
     | ItemsLoadedWithError of ErrorMessage
 
 [<RequireQualifiedAccess>]
@@ -48,11 +48,6 @@ module PageItemsModel =
         (authError: ErrorMessage -> 'GlobalAction)
         (model: PageItemsModel) = function
 
-        | PageItemsAction.InitPage None ->
-            { empty with Items = model.Items }, Cmd.batch [
-                Cmd.ofMsg (PageItemsAction.ItemsAction LoadItems)
-            ]
-            |> Cmd.map liftAction
         | PageItemsAction.InitPage item ->
             { empty with Items = model.Items }, Cmd.batch [
                 Cmd.ofMsg (PageItemsAction.ItemsAction LoadItems)
@@ -70,14 +65,13 @@ module PageItemsModel =
         // Items
         | PageItemsAction.ItemsAction LoadItems ->
             { model with ItemsLoadingStatus = InProgress },
-            Cmd.none
-            (* Cmd.OfAsyncImmediate.result (
+            Cmd.OfAsyncImmediate.result (
                 Api.loadItems
-                    (ItemsLoaded >> ItemsMessage >> liftAction)
-                    (ItemsLoadedWithError >> ItemsMessage >> liftAction)
+                    (ItemsLoaded >> PageItemsAction.ItemsAction >> liftAction)
+                    (ItemsLoadedWithError >> PageItemsAction.ItemsAction >> liftAction)
                     authError
                     ()
-            ) *)
+            )
         | PageItemsAction.ItemsAction (ItemsLoaded items) ->
             { model with Items = items; ItemsLoadingStatus = Inactive }, Cmd.none
         | PageItemsAction.ItemsAction (ItemsLoadedWithError error) ->

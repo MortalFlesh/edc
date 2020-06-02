@@ -63,7 +63,7 @@ module Page =
             map (MyEdcSets None) (s "my-sets")
 
             map (Id.parse >> Items) (s "items" </> str)
-            map (Items None) (s "my-sets")
+            map (Items None) (s "items")
         ]
 
 /// The model holds data that you want to keep track of while the application is running
@@ -218,7 +218,10 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
 
         | GoToItems, { CurrentUser = Some _ } ->
             let page = Items model.PageItemsModel.ItemDetail
-            { model with CurrentPage = page }, Navigation.newUrl (Page.toPath page)
+            { model with CurrentPage = page }, Cmd.batch [
+                Navigation.newUrl (Page.toPath page)
+                pageInitAction page
+            ]
 
         | _, { CurrentUser = None } -> model, Cmd.ofMsg (PageAction GoToLogin)
 

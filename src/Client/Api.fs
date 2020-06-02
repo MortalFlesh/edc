@@ -87,3 +87,6 @@ let inline private (>?>) secure apiCall =
 let loadData onSuccess onError onAuthorizationError =
     secure onError >?> (Server.api.LoadData >> callSecuredApi onSuccess onError onAuthorizationError)
 *)
+
+let loadItems onSuccess onError onAuthorizationError =
+    secure onError >?> (Server.api.LoadItems >> callSecuredApi onSuccess onError onAuthorizationError)

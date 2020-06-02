@@ -62,11 +62,19 @@ module Dto =
 
         type Weight = Weight of int<Gram>
 
+        [<RequireQualifiedAccess>]
+        module Weight =
+            let ofGrams grams = Weight (grams * 1<Gram>)
+
         type Dimensions = {
-            Heigh: int<Milimeter>
+            Height: int<Milimeter>
             Width: int<Milimeter>
-            Depth: int<Milimeter>
+            Length: int<Milimeter>
         }
+
+        [<RequireQualifiedAccess>]
+        module Dimensions =
+            let ofMilimeter (size: int) = size * 1<Milimeter>
 
         type Size = {
             Weight: Weight option
@@ -132,13 +140,13 @@ module Dto =
             Name: string
             Note: string option
             Color: Color option
-            Tag: Tag list
+            Tags: Tag list
             Links: Link list
             Price: Price option
             Size: Size option
             OwnershipStatus: OwnershipStatus
             Product: ProductInfo option
-            Gallery: Gallery
+            Gallery: Gallery option
         }
 
     module Items =
@@ -174,6 +182,7 @@ module Dto =
         // Items
         //
 
+        [<RequireQualifiedAccess>]
         type Item =
             | Tool of Tool
             | Container of Container
@@ -194,7 +203,6 @@ module Dto =
             Common: CommonInfo
 
             Items: ItemInContainer list
-            ItemsSize: Size
             TotalSize: Size
         }
 
@@ -341,4 +349,5 @@ type IEdcApi = {
 
         LoadData: SecureRequest<RequestData> -> SecuredAsyncResult<SecuredData, ErrorMessage>
     *)
+    LoadItems: SecureRequest<unit> -> SecuredAsyncResult<ItemEntity list, ErrorMessage>
 }

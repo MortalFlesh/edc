@@ -30,6 +30,7 @@ type Consumable =
 // Items
 //
 
+[<RequireQualifiedAccess>]
 type Item =
     | Tool of Tool
     | Container of Container
@@ -50,7 +51,6 @@ and ContainerInfo = {
     Common: CommonInfo
 
     Items: ItemInContainer list
-    ItemsSize: Size
     TotalSize: Size
 }
 

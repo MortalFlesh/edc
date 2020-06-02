@@ -11,10 +11,15 @@ open System
 
 type Weight = Weight of int<Gram>
 
+[<RequireQualifiedAccess>]
+module Weight =
+    let grams (Weight grams) = grams
+    let value = grams >> int
+
 type Dimensions = {
-    Heigh: int<Milimeter>
+    Height: int<Milimeter>
     Width: int<Milimeter>
-    Depth: int<Milimeter>
+    Length: int<Milimeter>
 }
 
 type Size = {
@@ -26,14 +31,36 @@ type Size = {
 // Product
 //
 
+type Currency =
+    | Czk
+    | Eur
+    | Usd
+    | Other of string
+
+[<RequireQualifiedAccess>]
+module Currency =
+    let value = function
+        | Czk -> "CZK"
+        | Eur -> "EUR"
+        | Usd -> "USD"
+        | Other currency -> currency
+
 type Price = {
     Amount: float
-    Currency: string
+    Currency: Currency
 }
 
 type Ean = Ean of string
 
+[<RequireQualifiedAccess>]
+module Ean =
+    let value (Ean ean) = ean
+
 type Link = Link of string
+
+[<RequireQualifiedAccess>]
+module Link =
+    let value (Link link) = link
 
 type ProductInfo = {
     Name: string
@@ -54,7 +81,15 @@ type Gallery = {
 // Common
 //
 
-type Id = Id of Guid
+[<AutoOpen>]
+module IdModule =
+    type Id = private Id of Guid
+
+    [<RequireQualifiedAccess>]
+    module Id =
+        let fromGuid = Id
+        let create () = Guid.NewGuid() |> Id
+        let value (Id id) = id |> string
 
 type OwnershipStatus =
     | Own
@@ -67,17 +102,25 @@ type OwnershipStatus =
 
 type Color = Color of string
 
+[<RequireQualifiedAccess>]
+module Color =
+    let value (Color color) = color
+
 type Tag = Tag of string
+
+[<RequireQualifiedAccess>]
+module Tag =
+    let value (Tag tag) = tag
 
 type CommonInfo = {
     Name: string
     Note: string option
     Color: Color option
-    Tag: Tag list
+    Tags: Tag list
     Links: Link list
     Price: Price option
     Size: Size option
     OwnershipStatus: OwnershipStatus
     Product: ProductInfo option
-    Gallery: Gallery
+    Gallery: Gallery option
 }

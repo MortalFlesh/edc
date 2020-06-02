@@ -40,6 +40,10 @@
 
         <!-- Api -->
 
+        <!-- Query -->
+        <Compile Include="Query/Query.fs" />
+        <Compile Include="Query/Items.fs" />
+
         <!-- Dto -->
         <Compile Include="Dto.fs" />
 

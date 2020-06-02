@@ -44,6 +44,8 @@ module Api =
 
     open ErrorHandling.AsyncResult.Operators
 
+    open MF.EDC.Query
+
     let edc: IEdcApi = {
         //
         // Public actions
@@ -93,6 +95,13 @@ module Api =
             return data |> List.map Dto.Serialize.data
         }
         *)
+
+        LoadItems = Authorize.withLogin >?> fun () -> asyncResult {
+            let! data =
+                ItemsQuery.load <@> (ItemsError.format >> ErrorMessage)
+
+            return data |> List.map Dto.Serialize.itemEntity
+        }
     }
 
 //
