@@ -30,6 +30,7 @@
         <!-- Stateful Components -->
         <Compile Include="Page/Login/Model.fs" />
         <Compile Include="Page/EdcSets/Model.fs" />
+        <Compile Include="Page/Items/Model.fs" />
 
         <!-- App model -->
         <Compile Include="Model.fs" />
@@ -41,6 +42,7 @@
 
         <!-- EdcSets Page -->
         <Compile Include="Page/EdcSets/View.fs" />
+        <Compile Include="Page/Items/View.fs" />
 
         <Compile Include="View.fs" />
     </ItemGroup>

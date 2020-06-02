@@ -3,12 +3,13 @@ module PageEdcModule
 open Elmish
 
 open Shared
+open Shared.Dto.Common
 open Shared.Dto.Edc
 
 type PageEdcModel = {
-    SelectedSet: EdcSetId option
+    SelectedSet: Id option
 
-    Sets: EdcSetId list
+    Sets: Id list
     SetsLoadingStatus: AsyncStatus
 }
 
@@ -18,14 +19,14 @@ type PageEdcModel = {
 
 type SetsAction =
     | RefreshSets
-    | SetsLoaded of EdcSetId list
+    | SetsLoaded of Id list
     | SetsLoadedWithError of ErrorMessage
     | HideSetsLoadingStatus
 
 [<RequireQualifiedAccess>]
 type PageEdcAction =
-    | InitPage of EdcSetId option
-    | SelectSet of EdcSetId option
+    | InitPage of Id option
+    | SelectSet of Id option
     | SetsAction of SetsAction
 
 type DispatchPageEdcAction = PageEdcAction -> unit

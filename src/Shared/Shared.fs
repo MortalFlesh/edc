@@ -105,7 +105,15 @@ module Dto =
         // Common
         //
 
-        type Id = Id of Guid
+        type Id = Id of string
+
+        [<RequireQualifiedAccess>]
+        module Id =
+            let parse = function
+                | null | "" -> None
+                | id -> Some (Id id)
+
+            let value (Id id) = id
 
         type OwnershipStatus =
             | Own
@@ -210,20 +218,11 @@ module Dto =
         }
 
     module Edc =
+        open Common
         open Items
 
-        type EdcSetId = EdcSetId of string
-
-        [<RequireQualifiedAccess>]
-        module EdcSetId =
-            let parse = function
-                | null | "" -> None
-                | set -> Some (EdcSetId set)
-
-            let value (EdcSetId id) = id
-
         type EDCSet = {
-            Id: EdcSetId
+            Id: Id
             Name: string option
             Description: string option
             Inventory: ContainerEntity list

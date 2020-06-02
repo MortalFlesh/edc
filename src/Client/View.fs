@@ -15,6 +15,7 @@ open Model
 let private isSelected = function
     | AnonymousEdcSets _, AnonymousEdcSets _ -> true
     | MyEdcSets _, MyEdcSets _ -> true
+    | Items _, Items _ -> true
     | _ -> false
 
 let private navBrand { CurrentPage = page; CurrentUser = user } dispatch =
@@ -37,7 +38,8 @@ let private navBrand { CurrentPage = page; CurrentUser = user } dispatch =
                     ] [ str "Sets" ]
 
                     Navbar.Item.a [
-                        (* todo *)
+                        Navbar.Item.IsActive (isSelected (page, Items None))
+                        Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToItems) ]
                     ] [ str "Items" ]
 
                     Navbar.Item.a [
@@ -115,6 +117,7 @@ let view (model: Model) (dispatch: Dispatch) =
             | Login -> PageLogin.page model.PageLogin (PageLoginAction >> dispatch)
             | AnonymousEdcSets _ -> PageEdcSets.page model.PageAnonymousEdcModel (PageAnonymousEdcAction >> dispatch)
             | MyEdcSets _ -> PageEdcSets.page model.PageMyEdcModel (PageMyEdcAction >> dispatch)
+            | Items _ -> PageItems.page model.PageItemsModel (PageItemsAction >> dispatch)
         ]
 
         Profiler.profiler (fun () -> refreshProfiler dispatch) model.Profiler (ProfilerAction >> dispatch)
