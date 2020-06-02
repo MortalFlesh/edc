@@ -12,6 +12,60 @@ open Thoth.Json
 open Shared
 open Model
 
+let private isSelected = function
+    | AnonymousEdcSets _, AnonymousEdcSets _ -> true
+    | MyEdcSets _, MyEdcSets _ -> true
+    | _ -> false
+
+let private navBrand { CurrentPage = page; CurrentUser = user } dispatch =
+    Navbar.navbar [ Navbar.Color IsWhite ] [
+        Container.container [] [
+            Navbar.Brand.div [] [
+                Navbar.Item.a [ Navbar.Item.CustomClass "brand-text" ] [ str "EDC" ]
+            ]
+
+            Navbar.menu [] [
+                Navbar.Start.div [] [
+                    Navbar.Item.a [
+                        Navbar.Item.IsActive (isSelected (page, AnonymousEdcSets None))
+                        Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToAnonymousEdcSets) ]
+                    ] [ str "Sets" ]
+                ]
+
+                if user.IsSome then
+                    Navbar.Start.div [] [
+                        Navbar.Item.a [
+                            Navbar.Item.IsActive (isSelected (page, MyEdcSets None))
+                            Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToMyEdcSets) ]
+                        ] [ str "My Sets" ]
+                    ]
+            ]
+
+            Navbar.End.div [] [
+                match user with
+                | Some { Username = Username username } ->
+                    Navbar.Item.a [
+                        Navbar.Item.IsActive true
+                    ] [
+                        Component.Icon.medium Fa.Solid.UserShield
+                        str username
+                    ]
+
+                    Navbar.Item.a [
+                        Navbar.Item.Props [ OnClick (fun _ -> dispatch Logout) ]
+                    ] [
+                        str "Log out"
+                        Component.Icon.medium Fa.Solid.SignOutAlt
+                    ]
+                | _ ->
+                    Navbar.Item.a [
+                        Navbar.Item.IsActive true
+                        Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToLogin) ]
+                    ] [ em [] [ str "Anonymous" ] ]
+            ]
+        ]
+    ]
+
 let private globalMessages model =
     fragment [] [
         if model.Success |> List.isEmpty |> not then
@@ -35,14 +89,15 @@ let private globalMessages model =
 
 let view (model: Model) (dispatch: Dispatch) =
     div [] [
-        //navBrand model (PageAction >> dispatch)
+        navBrand model (PageAction >> dispatch)
 
         Container.container [] [
             globalMessages model
 
             match model.CurrentPage with
             | Login -> PageLogin.page model.PageLogin (PageLoginAction >> dispatch)
-            | MyEdcSets _ -> PageMyEdcSets.page model.PageMyEdcModel (PageMyEdcAction >> dispatch)
+            | AnonymousEdcSets _ -> PageEdcSets.page model.PageAnonymousEdcModel (PageAnonymousEdcAction >> dispatch)
+            | MyEdcSets _ -> PageEdcSets.page model.PageMyEdcModel (PageMyEdcAction >> dispatch)
         ]
 
         Profiler.profiler (fun () -> refreshProfiler dispatch) model.Profiler (ProfilerAction >> dispatch)

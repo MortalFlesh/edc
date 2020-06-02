@@ -7,7 +7,7 @@ open Elmish.Navigation
 open Thoth.Json
 
 open PageLoginModule
-open PageMyEdcModule
+open PageEdcModule
 
 open Shared
 open ProfilerModel
@@ -15,7 +15,11 @@ open Shared.Dto.Login
 open Shared.Dto.Edc
 
 type Page =
+    // Public
     | Login
+    | AnonymousEdcSets of EdcSetId option
+
+    // Secured
     | MyEdcSets of EdcSetId option
 
 [<RequireQualifiedAccess>]
@@ -33,6 +37,10 @@ module Page =
     let toPath =
         function
         | Login -> "login"
+
+        | AnonymousEdcSets (Some set) -> sprintf "sets/%s" (set|> EdcSetId.value)
+        | AnonymousEdcSets None -> "sets"
+
         | MyEdcSets (Some set) -> sprintf "my-sets/%s" (set|> EdcSetId.value)
         | MyEdcSets None -> "my-sets"
         >> (+) "#/"
@@ -40,6 +48,9 @@ module Page =
     let parse: Parser<Page -> Page, Page> =
         oneOf [
             map Login (s "login")
+
+            map (EdcSetId.parse >> AnonymousEdcSets) (s "sets" </> str)
+            map (AnonymousEdcSets None) (s "sets")
 
             map (EdcSetId.parse >> MyEdcSets) (s "my-sets" </> str)
             map (MyEdcSets None) (s "my-sets")
@@ -56,7 +67,8 @@ type Model = {
     Profiler: ProfilerModel
 
     PageLogin: PageLoginModel
-    PageMyEdcModel: PageMyEdcModel
+    PageAnonymousEdcModel: PageEdcModel
+    PageMyEdcModel: PageEdcModel
 }
 
 [<RequireQualifiedAccess>]
@@ -73,6 +85,7 @@ module Model =
 type PageAction =
     | GoToLogin
     | Logout
+    | GoToAnonymousEdcSets
     | GoToMyEdcSets
 
 /// The Action type defines what events/actions can occur while the application is running
@@ -91,7 +104,8 @@ type Action =
 
     | PageAction of PageAction
     | PageLoginAction of PageLoginAction
-    | PageMyEdcAction of PageMyEdcAction
+    | PageAnonymousEdcAction of PageEdcAction
+    | PageMyEdcAction of PageEdcAction
 
 type Dispatch = Action -> unit
 
@@ -105,12 +119,14 @@ let initialModel = {
     Profiler = ProfilerModel.empty
 
     PageLogin = PageLoginModel.empty
-    PageMyEdcModel = PageMyEdcModel.empty
+    PageAnonymousEdcModel = PageEdcModel.empty
+    PageMyEdcModel = PageEdcModel.empty
 }
 
 let pageInitAction = function
     | Login -> Cmd.ofMsg (PageLoginAction.InitPage |> PageLoginAction)
-    | MyEdcSets set -> Cmd.ofMsg (PageMyEdcAction.InitPage set |> PageMyEdcAction)
+    | AnonymousEdcSets set -> Cmd.ofMsg (PageEdcAction.InitPage set |> PageMyEdcAction)
+    | MyEdcSets set -> Cmd.ofMsg (PageEdcAction.InitPage set |> PageMyEdcAction)
 
 //
 // Interval tasks
@@ -144,7 +160,7 @@ let init page : Model * Cmd<Action> =
     let model, cmd =
         match user with
         | Some loggedInUser ->
-            let page = page |> Option.defaultValue (MyEdcSets None)
+            let page = page |> Option.defaultValue (AnonymousEdcSets None)
             { initialModel with CurrentUser = Some loggedInUser; CurrentPage = page } |> Model.urlUpdate None
         | _ ->
             { initialModel with CurrentPage = Login } |> Model.urlUpdate None
@@ -176,6 +192,10 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
 
         | Logout, { CurrentUser = Some _ } ->
             model, Cmd.OfFunc.either User.delete () (fun _ -> LoggedOut) (ErrorMessage.fromExn >> ShowError)
+
+        | GoToAnonymousEdcSets, _ ->
+            let page = AnonymousEdcSets model.PageAnonymousEdcModel.SelectedSet
+            { model with CurrentPage = page }, Navigation.newUrl (Page.toPath page)
 
         | GoToMyEdcSets, { CurrentUser = Some _ } ->
             let page = MyEdcSets model.PageMyEdcModel.SelectedSet
@@ -258,10 +278,36 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
         |> List.choose id
         |> Cmd.batch
 
+    | PageAnonymousEdcAction pageAction ->
+        let navigateAction =
+            match pageAction with
+            | PageEdcAction.SelectSet (Some set) ->
+                AnonymousEdcSets (Some set)
+                |> Page.toPath
+                |> Navigation.modifyUrl
+                |> Some
+            | _ -> None
+
+        let pageModel, action =
+            pageAction
+            |> PageEdcModel.update
+                PageMyEdcAction
+                ShowSuccess
+                ShowError
+                LoggedOutWithError
+                model.PageAnonymousEdcModel
+
+        { model with PageAnonymousEdcModel = pageModel }, [
+            Some action
+            navigateAction
+        ]
+        |> List.choose id
+        |> Cmd.batch
+
     | PageMyEdcAction pageAction ->
         let navigateAction =
             match pageAction with
-            | PageMyEdcAction.SelectSet (Some set) ->
+            | PageEdcAction.SelectSet (Some set) ->
                 MyEdcSets (Some set)
                 |> Page.toPath
                 |> Navigation.modifyUrl
@@ -270,7 +316,7 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
 
         let pageModel, action =
             pageAction
-            |> PageMyEdcModel.update
+            |> PageEdcModel.update
                 PageMyEdcAction
                 ShowSuccess
                 ShowError

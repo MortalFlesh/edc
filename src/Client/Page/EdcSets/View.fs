@@ -1,5 +1,5 @@
 [<RequireQualifiedAccess>]
-module PageMyEdcSets
+module PageEdcSets
 
 open Elmish
 open Elmish.React
@@ -10,10 +10,10 @@ open Fable.React.Props
 open Fulma
 open Thoth.Json
 
-open PageMyEdcModule
+open PageEdcModule
 open Shared.Dto.Edc
 
-let page (model: PageMyEdcModel) (dispatch: DispatchPageMyEdcAction) =
+let page (model: PageEdcModel) (dispatch: DispatchPageEdcAction) =
     div [] [
         str "Todo ... "
         pre [] [ str (sprintf "%A" model) ]

@@ -1,11 +1,11 @@
-module PageMyEdcModule
+module PageEdcModule
 
 open Elmish
 
 open Shared
 open Shared.Dto.Edc
 
-type PageMyEdcModel = {
+type PageEdcModel = {
     SelectedSet: EdcSetId option
 
     Sets: EdcSetId list
@@ -22,15 +22,16 @@ type SetsAction =
     | SetsLoadedWithError of ErrorMessage
     | HideSetsLoadingStatus
 
-type PageMyEdcAction =
+[<RequireQualifiedAccess>]
+type PageEdcAction =
     | InitPage of EdcSetId option
     | SelectSet of EdcSetId option
     | SetsAction of SetsAction
 
-type DispatchPageMyEdcAction = PageMyEdcAction -> unit
+type DispatchPageEdcAction = PageEdcAction -> unit
 
 [<RequireQualifiedAccess>]
-module PageMyEdcModel =
+module PageEdcModel =
     let empty = {
         SelectedSet = None
 
@@ -39,30 +40,30 @@ module PageMyEdcModel =
     }
 
     let update<'GlobalAction>
-        (liftAction: PageMyEdcAction -> 'GlobalAction)
+        (liftAction: PageEdcAction -> 'GlobalAction)
         (showSuccess: SuccessMessage -> 'GlobalAction)
         (showError: ErrorMessage -> 'GlobalAction)
         (authError: ErrorMessage -> 'GlobalAction)
-        (model: PageMyEdcModel) = function
+        (model: PageEdcModel) = function
 
-        | InitPage None ->
+        | PageEdcAction.InitPage None ->
             { empty with Sets = model.Sets }, Cmd.batch [
-                Cmd.ofMsg (SetsAction RefreshSets)
+                Cmd.ofMsg (PageEdcAction.SetsAction RefreshSets)
             ]
             |> Cmd.map liftAction
-        | InitPage set ->
+        | PageEdcAction.InitPage set ->
             { empty with Sets = model.Sets }, Cmd.batch [
-                Cmd.ofMsg (SetsAction RefreshSets)
-                Cmd.ofMsg (SelectSet set)
+                Cmd.ofMsg (PageEdcAction.SetsAction RefreshSets)
+                Cmd.ofMsg (PageEdcAction.SelectSet set)
             ]
             |> Cmd.map liftAction
 
         // Select service
-        | SelectSet None -> { model with SelectedSet = None }, Cmd.none
-        | SelectSet (Some set) -> { model with SelectedSet = Some set }, Cmd.none
+        | PageEdcAction.SelectSet None -> { model with SelectedSet = None }, Cmd.none
+        | PageEdcAction.SelectSet (Some set) -> { model with SelectedSet = Some set }, Cmd.none
 
         // Sets
-        | SetsAction RefreshSets ->
+        | PageEdcAction.SetsAction RefreshSets ->
             { model with SetsLoadingStatus = InProgress },
             Cmd.none
             (* Cmd.OfAsyncImmediate.result (
@@ -72,17 +73,17 @@ module PageMyEdcModel =
                     authError
                     ()
             ) *)
-        | SetsAction (SetsLoaded sets) ->
+        | PageEdcAction.SetsAction (SetsLoaded sets) ->
             { model with Sets = sets; SetsLoadingStatus = Completed },
             Cmd.OfAsyncImmediate.result (async {
                 do! Async.Sleep (2 * 1000)
-                return SetsAction HideSetsLoadingStatus
+                return PageEdcAction.SetsAction HideSetsLoadingStatus
             })
             |> Cmd.map liftAction
-        | SetsAction (SetsLoadedWithError error) ->
+        | PageEdcAction.SetsAction (SetsLoadedWithError error) ->
             { model with Sets = [] },
             Cmd.batch [
                 Cmd.ofMsg (showError error)
-                Cmd.ofMsg (SetsAction HideSetsLoadingStatus) |> Cmd.map liftAction
+                Cmd.ofMsg (PageEdcAction.SetsAction HideSetsLoadingStatus) |> Cmd.map liftAction
             ]
-        | SetsAction HideSetsLoadingStatus -> { model with SetsLoadingStatus = Inactive }, Cmd.none
+        | PageEdcAction.SetsAction HideSetsLoadingStatus -> { model with SetsLoadingStatus = Inactive }, Cmd.none
