@@ -27,18 +27,35 @@ let private navBrand { CurrentPage = page; CurrentUser = user } dispatch =
             Navbar.menu [] [
                 Navbar.Start.div [] [
                     Navbar.Item.a [
+                        Navbar.Item.IsActive (isSelected (page, MyEdcSets None))
+                        Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToMyEdcSets) ]
+                    ] [ str "My Sets" ]
+
+                    Navbar.Item.a [
                         Navbar.Item.IsActive (isSelected (page, AnonymousEdcSets None))
                         Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToAnonymousEdcSets) ]
                     ] [ str "Sets" ]
-                ]
 
-                if user.IsSome then
-                    Navbar.Start.div [] [
-                        Navbar.Item.a [
-                            Navbar.Item.IsActive (isSelected (page, MyEdcSets None))
-                            Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToMyEdcSets) ]
-                        ] [ str "My Sets" ]
-                    ]
+                    Navbar.Item.a [
+                        (* todo *)
+                    ] [ str "Items" ]
+
+                    Navbar.Item.a [
+                        (* todo *)
+                    ] [ str "Containers" ]
+
+                    Navbar.Item.a [
+                        (* todo *)
+                    ] [ str "Tags" ]
+
+                    Navbar.Item.a [
+                        (* todo *)
+                    ] [ str "Stats" ]
+
+                    Navbar.Item.a [
+                        (* todo *)
+                    ] [ str "Wishlist" ]
+                ]
             ]
 
             Navbar.End.div [] [

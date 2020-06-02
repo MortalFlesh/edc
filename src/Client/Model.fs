@@ -201,6 +201,8 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
             let page = MyEdcSets model.PageMyEdcModel.SelectedSet
             { model with CurrentPage = page }, Navigation.newUrl (Page.toPath page)
 
+        | _, { CurrentUser = None } -> model, Cmd.ofMsg (PageAction GoToLogin)
+
         | _ -> model, Cmd.none
 
     // Global Messages
