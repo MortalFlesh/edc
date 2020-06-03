@@ -225,6 +225,10 @@ module Dto =
             Container: Container
         }
 
+        [<RequireQualifiedAccess>]
+        module ItemEntity =
+            let item: ItemEntity -> Item = fun { Item = item } -> item
+
     module Edc =
         open Common
         open Items

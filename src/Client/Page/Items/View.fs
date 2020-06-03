@@ -11,10 +11,18 @@ open Fulma
 open Thoth.Json
 
 open PageItemsModule
-open Shared.Dto.Edc
+open Shared.Dto.Items
+
+open Component.Items
 
 let page (model: PageItemsModel) (dispatch: DispatchPageItemsAction) =
     div [] [
-        str "Todo ... "
+        Component.subTitle "Items"
+
+        model.Items
+        |> List.map ItemEntity.item
+        |> Items.commonTable
+
+        hr []
         pre [] [ str (sprintf "%A" model) ]
     ]
