@@ -96,7 +96,10 @@ module CurrentApplication =
             let! instance = "INSTANCE" |> Environment.instance environment <@> InstanceError.format
             let! debug = "DEBUG" |> Environment.debug environment
 
-            let tokenKey = JWTKey.generate()
+            let tokenKey = 
+                match debug with
+                | Dev -> JWTKey.forDevelopment
+                | Prod -> JWTKey.generate()
 
             return {
                 Instance = instance

@@ -43,8 +43,12 @@ module JwtKeyModule =
 
     [<RequireQualifiedAccess>]
     module JWTKey =
+        open System
+
+        let forDevelopment = JWTKey ("97a5a8b4-dea4-4b46-bd11-5b003bf304b0" |> Guid.Parse)
+
         let generate () =
-            System.Guid.NewGuid()
+            Guid.NewGuid()
             |> JWTKey
 
         let value = function
