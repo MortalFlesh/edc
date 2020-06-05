@@ -127,3 +127,25 @@ let inputField onSubmit isEnabled (input: Input) onChange title error value =
             ]
         ]
     ]
+
+let table headers row items =
+    Table.table [
+        Table.IsBordered
+        Table.IsFullWidth
+        Table.IsStriped
+        Table.IsHoverable
+    ] [
+        thead [] [
+            tr [] [
+                yield! headers |> List.map (fun header -> th [] [ str header ])
+            ]
+        ]
+
+        tbody [] [
+            yield! items |> List.map (row >> fun cols ->
+                tr [] [
+                    yield! cols |> List.map (fun col -> td [] [ col ])
+                ]
+            )
+        ]
+    ]

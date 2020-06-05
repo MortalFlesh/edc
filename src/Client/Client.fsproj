@@ -26,7 +26,8 @@
 
         <!-- Stateless Components -->
         <Compile Include="Component/Component.fs" />
-        <Compile Include="Component/Items/Item.fs" />
+        <Compile Include="Component/Common.fs" />
+        <Compile Include="Component/Item.fs" />
 
         <!-- Stateful Components -->
         <Compile Include="Page/Login/Model.fs" />

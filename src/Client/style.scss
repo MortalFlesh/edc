@@ -14,6 +14,8 @@ $family-primary: 'Open Sans';
 
 // Bulma
 @import "~bulma/bulma";
+@import "~bulma-tooltip/src/sass";
+@import "~bulma-quickview/src/sass";
 
 // Profiler
 @import "./Component/Profiler/style.scss";

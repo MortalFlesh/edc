@@ -30,5 +30,9 @@
         "webpack-cli": "^3.3.11",
         "webpack-dev-server": "^3.11.0",
         "whatwg-fetch": "^3.0.0"
+    },
+    "dependencies": {
+        "bulma-quickview": "^2.0.0",
+        "bulma-tooltip": "^3.0.2"
     }
 }

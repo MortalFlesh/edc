@@ -20,8 +20,11 @@ let page (model: PageItemsModel) (dispatch: DispatchPageItemsAction) =
         Component.subTitle "Items"
 
         model.Items
-        |> List.map ItemEntity.item
-        |> Items.commonTable
+        |> List.map FlatItemEntity.ofItemEntity
+        |> FlatItems.table
+            (PageItemsAction.ShowDetail >> dispatch)
+            (fun () -> PageItemsAction.HideDetail |> dispatch)
+            model.ItemDetail
 
         hr []
         pre [] [ str (sprintf "%A" model) ]
