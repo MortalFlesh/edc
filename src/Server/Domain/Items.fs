@@ -10,7 +10,7 @@ type ToolInfo = {
 
 type Tool =
     | MultiTool of ToolInfo
-    | Knife of ToolInfo
+    | Knife of (* Fixed|Foldable of FoldedSize *) ToolInfo
     | Gun of ToolInfo
     | Other of ToolInfo
 

@@ -40,6 +40,10 @@ module String =
     let toLower (string: string) =
         string.ToLower()
 
+    let parse = function
+        | null | "" -> None
+        | string -> Some string
+
 [<RequireQualifiedAccess>]
 module Result =
     let toOption = function

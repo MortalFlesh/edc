@@ -102,7 +102,9 @@ module Modal =
 
 type private Input = Input.Option list -> ReactElement
 
-let inputField onSubmit isEnabled (input: Input) onChange title error value =
+let inputField onSubmit isEnabled (input: Input) onChange title errors value =
+    let error = errors |> Map.tryFind title
+
     Field.div [] [
         Field.div [ Field.HasAddons ] [
             Control.p [] [
@@ -126,6 +128,21 @@ let inputField onSubmit isEnabled (input: Input) onChange title error value =
                 | _ -> ()
             ]
         ]
+    ]
+
+let submit onSubmit status (title, titleSubmitting)  =
+    Button.button [
+        Button.Disabled (status = InProgress)
+        Button.Color IsPrimary
+        Button.OnClick (fun _ -> onSubmit())
+    ] [
+        match status with
+        | InProgress ->
+            Icon.asyncStatus status
+            span [] [ str " " ]
+            str (sprintf "%s ..." titleSubmitting)
+        | _ ->
+            str title
     ]
 
 let table headers row items =

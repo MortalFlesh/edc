@@ -13,11 +13,32 @@ open Thoth.Json
 open PageItemsModule
 open Shared.Dto.Items
 
-open Component.Items
+open Component.FlatItems
 
-let page (model: PageItemsModel) (dispatch: DispatchPageItemsAction) =
+let topMenu routing =
+    Level.level [] [
+        Level.left [] [
+            Level.item [] [
+                Component.subTitle "Items"
+            ]
+        ]
+
+        Level.right [] [
+            Level.item [] [
+                Button.button [
+                    Button.Color IsSuccess
+                    Button.OnClick (fun _ -> routing.GoToAddItem())
+                ] [
+                    Component.Icon.medium Fa.Solid.PlusCircle
+                    span [] [ str "Add" ]
+                ]
+            ]
+        ]
+    ]
+
+let page routing (model: PageItemsModel) (dispatch: DispatchPageItemsAction) =
     div [] [
-        Component.subTitle "Items"
+        topMenu routing
 
         model.Items
         |> List.map FlatItemEntity.ofItemEntity

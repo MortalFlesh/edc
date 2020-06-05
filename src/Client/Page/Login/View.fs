@@ -18,6 +18,16 @@ let page (model: PageLoginModel) (dispatch: DispatchPageLoginAction) =
     let onSubmit = if isLogging then ignore else (fun _ -> dispatch Login)
     let inputField = Component.inputField onSubmit (not isLogging)
 
+    let errors = Map.ofList [
+        match model.UsernameError with
+        | Some error -> yield "Username" => error
+        | _ -> ()
+
+        match model.PasswordError with
+        | Some error -> yield "Password" => error
+        | _ -> ()
+    ]
+
     fragment [] [
         Columns.columns [] [
             Column.column [ Column.Width (Screen.All, Column.Is12) ] [
@@ -25,21 +35,19 @@ let page (model: PageLoginModel) (dispatch: DispatchPageLoginAction) =
                     Column.column [ Column.Width (Screen.All, Column.Is5) ] [
                         model.Username
                         |> Username.value
-                        |> inputField
-                            Input.text
+                        |> inputField Input.text
                             (Username >> PageLoginAction.ChangeUsername >> dispatch)
                             "Username"
-                            model.UsernameError
+                            errors
                     ]
 
                     Column.column [ Column.Width (Screen.All, Column.Is5) ] [
                         model.Password
                         |> Password.value
-                        |> inputField
-                            Input.password
+                        |> inputField Input.password
                             (Password >> PageLoginAction.ChangePassword >> dispatch)
                             "Password"
-                            model.PasswordError
+                            errors
                     ]
 
                     Column.column [ Column.Width (Screen.All, Column.Is1); Column.Offset (Screen.All, Column.Is1) ] [

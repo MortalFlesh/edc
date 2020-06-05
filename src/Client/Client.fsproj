@@ -28,23 +28,24 @@
         <Compile Include="Component/Component.fs" />
         <Compile Include="Component/Common.fs" />
         <Compile Include="Component/Item.fs" />
+        <Compile Include="Component/FlatItem.fs" />
 
         <!-- Stateful Components -->
         <Compile Include="Page/Login/Model.fs" />
         <Compile Include="Page/EdcSets/Model.fs" />
         <Compile Include="Page/Items/Model.fs" />
+        <Compile Include="Page/AddItem/Model.fs" />
 
         <!-- App model -->
         <Compile Include="Model.fs" />
 
         <!-- Pages -->
+        <Compile Include="Routing.fs" />
 
-        <!-- Login Page -->
         <Compile Include="Page/Login/View.fs" />
-
-        <!-- EdcSets Page -->
         <Compile Include="Page/EdcSets/View.fs" />
         <Compile Include="Page/Items/View.fs" />
+        <Compile Include="Page/AddItem/View.fs" />
 
         <Compile Include="View.fs" />
     </ItemGroup>

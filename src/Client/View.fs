@@ -18,7 +18,7 @@ let private isSelected = function
     | Items _, Items _ -> true
     | _ -> false
 
-let private navBrand { CurrentPage = page; CurrentUser = user } dispatch =
+let private navBrand routing { CurrentPage = page; CurrentUser = user } =
     Navbar.navbar [ Navbar.Color IsWhite ] [
         Container.container [] [
             Navbar.Brand.div [] [
@@ -29,17 +29,17 @@ let private navBrand { CurrentPage = page; CurrentUser = user } dispatch =
                 Navbar.Start.div [] [
                     Navbar.Item.a [
                         Navbar.Item.IsActive (isSelected (page, MyEdcSets None))
-                        Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToMyEdcSets) ]
+                        Navbar.Item.Props [ OnClick (fun _ -> routing.GoToMyEdcSets()) ]
                     ] [ str "My Sets" ]
 
                     Navbar.Item.a [
                         Navbar.Item.IsActive (isSelected (page, AnonymousEdcSets None))
-                        Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToAnonymousEdcSets) ]
+                        Navbar.Item.Props [ OnClick (fun _ -> routing.GoToAnonymousEdcSets()) ]
                     ] [ str "Sets" ]
 
                     Navbar.Item.a [
                         Navbar.Item.IsActive (isSelected (page, Items None))
-                        Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToItems) ]
+                        Navbar.Item.Props [ OnClick (fun _ -> routing.GoToItems()) ]
                     ] [ str "Items" ]
 
                     Navbar.Item.a [
@@ -71,7 +71,7 @@ let private navBrand { CurrentPage = page; CurrentUser = user } dispatch =
                     ]
 
                     Navbar.Item.a [
-                        Navbar.Item.Props [ OnClick (fun _ -> dispatch Logout) ]
+                        Navbar.Item.Props [ OnClick (fun _ -> routing.Logout()) ]
                     ] [
                         str "Log out"
                         Component.Icon.medium Fa.Solid.SignOutAlt
@@ -79,7 +79,7 @@ let private navBrand { CurrentPage = page; CurrentUser = user } dispatch =
                 | _ ->
                     Navbar.Item.a [
                         Navbar.Item.IsActive true
-                        Navbar.Item.Props [ OnClick (fun _ -> dispatch GoToLogin) ]
+                        Navbar.Item.Props [ OnClick (fun _ -> routing.GoToLogin()) ]
                     ] [ em [] [ str "Anonymous" ] ]
             ]
         ]
@@ -107,8 +107,10 @@ let private globalMessages model =
     ]
 
 let view (model: Model) (dispatch: Dispatch) =
+    let routing = Routing.routing (PageAction >> dispatch)
+
     div [] [
-        navBrand model (PageAction >> dispatch)
+        navBrand routing model
 
         Container.container [] [
             globalMessages model
@@ -117,7 +119,8 @@ let view (model: Model) (dispatch: Dispatch) =
             | Login -> PageLogin.page model.PageLogin (PageLoginAction >> dispatch)
             | AnonymousEdcSets _ -> PageEdcSets.page model.PageAnonymousEdcModel (PageAnonymousEdcAction >> dispatch)
             | MyEdcSets _ -> PageEdcSets.page model.PageMyEdcModel (PageMyEdcAction >> dispatch)
-            | Items _ -> PageItems.page model.PageItemsModel (PageItemsAction >> dispatch)
+            | Items _ -> PageItems.page routing model.PageItemsModel (PageItemsAction >> dispatch)
+            | AddItem _ -> PageAddItem.page model.PageAddItemModel (PageAddItemAction >> dispatch)
         ]
 
         Profiler.profiler (fun () -> refreshProfiler dispatch) model.Profiler (ProfilerAction >> dispatch)
