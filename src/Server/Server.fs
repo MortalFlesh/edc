@@ -17,12 +17,31 @@ open MF.EDC.Profiler
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 
-let publicPath = Path.GetFullPath "../Client/public"
+open Microsoft.WindowsAzure.Storage
 
 let currentApplication =
     [ ".env"; ".dist.env" ]
     |> CurrentApplication.fromEnvironment
-    |> Result.orFail
+    // todo |> Result.orFail? or maybe CurrentApplication.defaults
+    |> function
+        | Ok app -> app
+        | Error _ ->
+            let tokenKey = JWTKey.forDevelopment
+            {
+                Instance = Instance.create "mf-edc-default"
+                TokenKey = tokenKey
+                KeysForToken = [
+                    tokenKey
+                ]
+                Debug = Dev
+                Dependencies = NoDependenciesYet
+            }
+
+let tryGetEnv key =
+    Environment.getEnvs() |> Map.tryFind key
+
+let publicPath = tryGetEnv "public_path" |> Option.defaultValue "../Client/public" |> Path.GetFullPath
+let storageAccount = tryGetEnv "STORAGE_CONNECTIONSTRING" |> Option.defaultValue "UseDevelopmentStorage=true" |> CloudStorageAccount.Parse
 
 //
 // Api
@@ -76,8 +95,8 @@ module Api =
         LoadProfiler = fun token -> async {
             return
                 match currentApplication.Debug with
-                | Dev -> Profiler.init currentApplication.Instance (sprintf "%A" Dev) |> Some
-                | Prod when token = Some Profiler.token -> Profiler.init currentApplication.Instance (sprintf "%A with token" Prod) |> Some
+                | Dev -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A" Dev) |> Some
+                | Prod when token = Some Profiler.token -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A with token" Prod) |> Some
                 | Prod -> None
         }
 
@@ -108,6 +127,11 @@ module Api =
 // Application
 //
 
+let configureAzure (services:IServiceCollection) =
+    tryGetEnv "APPINSIGHTS_INSTRUMENTATIONKEY"
+    |> Option.map services.AddApplicationInsightsTelemetry
+    |> Option.defaultValue services
+
 let apiRouter =
     Remoting.createApi()
     |> Remoting.withRouteBuilder Route.builder
@@ -125,6 +149,7 @@ let app = application {
     use_router appRouter
     memory_cache
     use_static publicPath
+    service_config configureAzure
     use_gzip
 }
 

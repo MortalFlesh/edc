@@ -46,7 +46,7 @@ module Profiler =
             Link = None
         }
 
-    let init currentApplication debug =
+    let init currentApplication (environment: Map<string, string>) debug =
         let errorsCount = Errors.count()
 
         Profiler.Toolbar [
@@ -77,6 +77,21 @@ module Profiler =
                     Profiler.Detail.createItem (Profiler.Label "Git Branch") (Profiler.Value AssemblyVersionInformation.AssemblyMetadata_gitbranch)
                     Profiler.Detail.createItem (Profiler.Label "Git Commit") (Profiler.Value AssemblyVersionInformation.AssemblyMetadata_gitcommit)
                 ]
+            }
+
+            yield {
+                Id = Profiler.Id "Environment"
+                Label = Some (Profiler.Label "Environment")
+                Value = Profiler.Value (environment |> Seq.length |> sprintf "%A")
+                Unit = None
+                ItemColor = None
+                StatusIcon = None
+                Detail =
+                    environment
+                    |> Map.toList
+                    |> List.map (fun (key, value) ->
+                        Profiler.Detail.createItem (Profiler.Label key) (Profiler.Value value)
+                    )
             }
 
             yield {

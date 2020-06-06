@@ -71,6 +71,9 @@ module InstanceModule =
 
     [<RequireQualifiedAccess>]
     module Instance =
+        /// Todo - remove - now just for debuggging
+        let create = Instance
+
         let parse = function
             | null | "" -> None
             | instance -> Some (Instance instance)

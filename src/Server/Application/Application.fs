@@ -85,7 +85,7 @@ module CurrentApplication =
             return
                 environment
                 |> Map.tryFind variableName
-                |> Option.defaultValue "prod"
+                |> Option.defaultValue "dev"    // todo - use prod as default
                 |> Debug.parse
         }
 
@@ -96,7 +96,7 @@ module CurrentApplication =
             let! instance = "INSTANCE" |> Environment.instance environment <@> InstanceError.format
             let! debug = "DEBUG" |> Environment.debug environment
 
-            let tokenKey = 
+            let tokenKey =
                 match debug with
                 | Dev -> JWTKey.forDevelopment
                 | Prod -> JWTKey.generate()

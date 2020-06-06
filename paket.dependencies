@@ -7,6 +7,8 @@ group Server
     nuget Saturn
     nuget JsonWebToken ~> 1.3
     nuget Fable.Remoting.Giraffe ~> 3
+    nuget Microsoft.ApplicationInsights.AspNetCore
+    nuget WindowsAzure.Storage
 
 group Client
     source https://api.nuget.org/v3/index.json
@@ -32,8 +34,12 @@ group Build
     storage: none
 
     nuget FSharp.Core
+    nuget Fake.Core.Environment
     nuget Fake.Core.Target
+    nuget Fake.Core.Trace
     nuget Fake.DotNet.AssemblyInfoFile
     nuget Fake.DotNet.Cli
     nuget Fake.IO.FileSystem
+    nuget Fake.IO.Zip
     nuget Fake.Tools.Git
+    github CompositionalIT/fshelpers src/FsHelpers/ArmHelper/ArmHelper.fs

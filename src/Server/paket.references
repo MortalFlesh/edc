@@ -3,3 +3,5 @@ group Server
     Saturn
     Fable.Remoting.Giraffe
     JsonWebToken
+    Microsoft.ApplicationInsights.AspNetCore
+    WindowsAzure.Storage
