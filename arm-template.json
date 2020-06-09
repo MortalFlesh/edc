@@ -82,6 +82,18 @@
                         {
                             "name": "STORAGE_CONNECTIONSTRING",
                             "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storage'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts/', variables('storage')), '2017-10-01').keys[0].value)]"
+                        },
+                        {
+                            "name": "INSTANCE",
+                            "value": "mf-edc-azure"
+                        },
+                        {
+                            "name": "VERBOSITY",
+                            "value": "v"
+                        },
+                        {
+                            "name": "DEBUG",
+                            "value": "dev"
                         }
                     ]
                 }
