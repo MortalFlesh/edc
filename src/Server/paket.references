@@ -4,4 +4,6 @@ group Server
     Fable.Remoting.Giraffe
     JsonWebToken
     Microsoft.ApplicationInsights.AspNetCore
+    Microsoft.Extensions.Logging.ApplicationInsights
     WindowsAzure.Storage
+    Dapper.FSharp

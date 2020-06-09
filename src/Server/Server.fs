@@ -37,6 +37,7 @@ let currentApplication =
                 Dependencies = NoDependenciesYet
             }
 
+// todo - move following to current application
 let tryGetEnv key =
     Environment.getEnvs() |> Map.tryFind key
 
@@ -49,97 +50,132 @@ let storageAccount = tryGetEnv "STORAGE_CONNECTIONSTRING" |> Option.defaultValue
 
 [<RequireQualifiedAccess>]
 module Api =
-    //let private logger = currentApplication.Logger.Error "EDC"
-    let private logError = eprintfn "[EDC] %A"
-
-    let inline private (>?>) authorize action =
-        Authorize.authorizeAction
-            currentApplication.Instance
-            currentApplication.TokenKey
-            currentApplication.KeysForToken
-            logError
-            authorize
-            action
-
     open ErrorHandling.AsyncResult.Operators
-
     open MF.EDC.Query
 
-    let edc: IEdcApi = {
-        //
-        // Public actions
-        //
+    let edc logMessage: IEdcApi =
+        let logError = logMessage
 
-        Login = fun credentials -> asyncResult {
-            let! credentials =
-                credentials
-                |> Dto.Deserialize.credentials
-                |> AsyncResult.ofResult <@> (CredentialsError.format >> ErrorMessage)
+        let inline (>?>) authorize action =
+            Authorize.authorizeAction
+                currentApplication.Instance
+                currentApplication.TokenKey
+                currentApplication.KeysForToken
+                logError
+                authorize
+                action
 
-            let user = {
-                Username = credentials.Username
-                Token =
-                    JWTToken.create
-                        currentApplication.Instance
-                        currentApplication.TokenKey
-                        [
-                            CustomItem.String (UserCustomData.Username, credentials.Username |> Username.value)
-                            CustomItem.String (UserCustomData.DisplayName, credentials.Username |> Username.value)
-                            CustomItem.Strings (UserCustomData.Groups, [])
-                        ]
+        {
+            //
+            // Public actions
+            //
+
+            Login = fun credentials -> asyncResult {
+                let! credentials =
+                    credentials
+                    |> Dto.Deserialize.credentials
+                    |> AsyncResult.ofResult <@> (CredentialsError.format >> ErrorMessage)
+
+                let user = {
+                    Username = credentials.Username
+                    Token =
+                        JWTToken.create
+                            currentApplication.Instance
+                            currentApplication.TokenKey
+                            [
+                                CustomItem.String (UserCustomData.Username, credentials.Username |> Username.value)
+                                CustomItem.String (UserCustomData.DisplayName, credentials.Username |> Username.value)
+                                CustomItem.Strings (UserCustomData.Groups, [])
+                            ]
+                }
+
+                return user |> Dto.Serialize.user
             }
 
-            return user |> Dto.Serialize.user
-        }
+            LoadProfiler = fun token -> async {
+                return
+                    match currentApplication.Debug with
+                    | Dev -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A" Dev) |> Some
+                    | Prod when token = Some Profiler.token -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A with token" Prod) |> Some
+                    | Prod -> None
+            }
 
-        LoadProfiler = fun token -> async {
-            return
-                match currentApplication.Debug with
-                | Dev -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A" Dev) |> Some
-                | Prod when token = Some Profiler.token -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A with token" Prod) |> Some
-                | Prod -> None
-        }
+            //
+            // Secured actions
+            //
 
-        //
-        // Secured actions
-        //
+            (*
+                Example:
 
-        (*
-            Example:
+            LoadData = Authorize.withLogin >?> fun requestData -> asyncResult {
+                let! data =
+                    searchData requestData <@> (SearchError.format >> ErrorMessage)
 
-        LoadData = Authorize.withLogin >?> fun requestData -> asyncResult {
-            let! data =
-                searchData requestData <@> (SearchError.format >> ErrorMessage)
+                return data |> List.map Dto.Serialize.data
+            }
+            *)
 
-            return data |> List.map Dto.Serialize.data
-        }
-        *)
+            LoadItems = Authorize.withLogin >?> fun () -> asyncResult {
+                let! data =
+                    ItemsQuery.load <@> (ItemsError.format >> ErrorMessage)
 
-        LoadItems = Authorize.withLogin >?> fun () -> asyncResult {
-            let! data =
-                ItemsQuery.load <@> (ItemsError.format >> ErrorMessage)
+                PersonsQuery.init()
+                let! persons =
+                    PersonsQuery.load <@> (PersonError.format >> ErrorMessage)
 
-            return data |> List.map Dto.Serialize.itemEntity
-        }
+                printfn "Persons: %A" persons
+
+                return data |> List.map Dto.Serialize.itemEntity
+            }
     }
 
 //
 // Application
 //
 
-let configureAzure (services:IServiceCollection) =
-    tryGetEnv "APPINSIGHTS_INSTRUMENTATIONKEY"
-    |> Option.map services.AddApplicationInsightsTelemetry
-    |> Option.defaultValue services
+[<RequireQualifiedAccess>]
+module AppInsightTelemetry =
+    let configure (services: IServiceCollection) =
+        tryGetEnv "APPINSIGHTS_INSTRUMENTATIONKEY"
+        |> Option.map services.AddApplicationInsightsTelemetry
+        |> Option.defaultValue services
+
+[<RequireQualifiedAccess>]
+module Logger =
+    open Microsoft.Extensions.Logging
+
+    let logMessage (logger: ILogger) (message: string) =
+        logger.LogInformation(sprintf "[Information] %s" message)
+        logger.LogDebug(sprintf "[Debug] %s" message)
+        logger.LogTrace(sprintf "[Trace] %s" message)
+        logger.LogWarning(sprintf "[Warning] %s" message)
+        logger.LogError(sprintf "[Error] %s" message)
+        logger.LogCritical(sprintf "[Critical] %s" message)
+
+        ()
+
+    let configure (services: IServiceCollection) =
+        services.AddLogging()
 
 let apiRouter =
     Remoting.createApi()
     |> Remoting.withRouteBuilder Route.builder
-    |> Remoting.fromValue Api.edc
+    |> Remoting.fromContext (fun ctx ->
+        // https://zaid-ajaj.github.io/Fable.Remoting/src/dependency-injection.html
+        let logger = ctx.GetLogger<IEdcApi>()
+
+        Api.edc (Logger.logMessage logger)  // todo - create ApplicationLogger
+    )
     |> Remoting.buildHttpHandler
 
 let appRouter = router {
     // get "/custom" (warbler (customPage >> text))
+
+    getf "/.well-known/acme-challenge/%s" (fun challenge ->
+        warbler (fun ctx ->
+            "... todo - load from db ..." |> text
+        )
+    )
 
     forward "/api/" apiRouter
 }
@@ -149,7 +185,10 @@ let app = application {
     use_router appRouter
     memory_cache
     use_static publicPath
-    service_config configureAzure
+    service_config (
+        AppInsightTelemetry.configure
+        >> Logger.configure
+    )
     use_gzip
 }
 

@@ -857,6 +857,11 @@ STORAGE: NONE
 RESTRICTION: == netcoreapp3.1
 NUGET
   remote: https://api.nuget.org/v3/index.json
+    Dapper (2.0.35)
+      System.Reflection.Emit.Lightweight (>= 4.7)
+    Dapper.FSharp (1.9)
+      Dapper (>= 2.0.30)
+      FSharp.Core (>= 4.7)
     Fable.Remoting.Giraffe (3.12)
       Fable.Remoting.Json (>= 2.7)
       Fable.Remoting.Server (>= 4.11)
@@ -878,7 +883,7 @@ NUGET
       Newtonsoft.Json (>= 12.0.2)
       TaskBuilder.fs (>= 2.1)
       Utf8Json (>= 1.3.7)
-    JsonWebToken (1.5)
+    JsonWebToken (1.5.1)
       System.Runtime.CompilerServices.Unsafe (>= 4.7.1)
       System.Text.Json (>= 4.7.2)
     Microsoft.ApplicationInsights (2.14)

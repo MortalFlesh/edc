@@ -8,7 +8,9 @@ group Server
     nuget JsonWebToken ~> 1.3
     nuget Fable.Remoting.Giraffe ~> 3
     nuget Microsoft.ApplicationInsights.AspNetCore
+    nuget Microsoft.Extensions.Logging.ApplicationInsights
     nuget WindowsAzure.Storage
+    nuget Dapper.FSharp ~> 1.9
 
 group Client
     source https://api.nuget.org/v3/index.json
