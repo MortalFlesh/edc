@@ -3,6 +3,14 @@ EDC Configurator
 
 > Web gui for create/manage EDC sets
 
+## Maintenance and self-notes
+
+### SSL cert
+> https://medium.com/@marcmathijssen/add-ssl-to-azure-web-app-using-letsencrypt-9125c3fdfb03
+- `sudo certbot certonly --preferred-challenges http -d myedc.cz --manual`
+- To success the acme challenge, use an in-app route and pass a value to db (*todo*)
+- `sudo openssl pkcs12 -export -out ./myedc.pfx -inkey /etc/letsencrypt/live/myedc.cz/privkey.pem -in /etc/letsencrypt/live/myedc.cz/cert.pem`
+
 ---
 ## SAFE Template
 
