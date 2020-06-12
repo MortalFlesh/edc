@@ -13,7 +13,7 @@ open Fulma.Extensions.Wikiki
 open Component.Common
 
 open Shared
-open Shared.Dto.Items
+open Shared.FlatItem
 
 [<RequireQualifiedAccess>]
 module FlatItem =

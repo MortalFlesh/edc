@@ -34,12 +34,18 @@ let currentApplication =
                     tokenKey
                 ]
                 Debug = Dev
-                Dependencies = NoDependenciesYet
+                Dependencies = {
+                    MysqlDatabase = ConnectionString "... todo ..."
+                    AzureSqlDatabase = ConnectionString "... todo ..."
+                }
             }
 
 // todo - move following to current application
+let envs =
+    Environment.getEnvs()
+    //|> tee (Map.toList >> List.iter (printfn "- %A"))
 let tryGetEnv key =
-    Environment.getEnvs() |> Map.tryFind key
+    envs |> Map.tryFind key
 
 let publicPath = tryGetEnv "public_path" |> Option.defaultValue "../Client/public" |> Path.GetFullPath
 let storageAccount = tryGetEnv "STORAGE_CONNECTIONSTRING" |> Option.defaultValue "UseDevelopmentStorage=true" |> CloudStorageAccount.Parse
@@ -53,9 +59,7 @@ module Api =
     open ErrorHandling.AsyncResult.Operators
     open MF.EDC.Query
 
-    let edc logMessage: IEdcApi =
-        let logError = logMessage
-
+    let edc logError: IEdcApi =
         let inline (>?>) authorize action =
             Authorize.authorizeAction
                 currentApplication.Instance
@@ -116,16 +120,46 @@ module Api =
             *)
 
             LoadItems = Authorize.withLogin >?> fun () -> asyncResult {
+                let mySqlLocalConnection = currentApplication.Dependencies.MysqlDatabase |> Database.MySql.MySql.connect
+                let azureSqlConnection = currentApplication.Dependencies.AzureSqlDatabase |> Database.AzureSql.AzureSql.connect
+
                 let! data =
-                    ItemsQuery.load <@> (ItemsError.format >> ErrorMessage)
-
-                PersonsQuery.init()
-                let! persons =
-                    PersonsQuery.load <@> (PersonError.format >> ErrorMessage)
-
-                printfn "Persons: %A" persons
+                    ItemsQuery.load storageAccount mySqlLocalConnection azureSqlConnection <@> (ItemsError.format >> ErrorMessage)
 
                 return data |> List.map Dto.Serialize.itemEntity
+            }
+
+            CreateItem = Authorize.withLogin >?> fun item -> asyncResult {
+                // todo - deserialize item
+                let fItem = item |> FlatItem.FlatItem.ofItem |> FlatItem.FlatItem.data
+                let itemEntity =
+                    {
+                        Id = Id.create()
+                        Item = Item.Tool (Knife {
+                            Common = {
+                                Name = fItem.Common.Name
+                                Note = None
+                                Color = None
+                                Tags = []
+                                Links = []
+                                Price = None
+                                Size = None
+                                OwnershipStatus = Own
+                                Product = None
+                                Gallery = None
+                            }
+
+                        })
+                    }
+
+                let mysqlLocalConnection = currentApplication.Dependencies.MysqlDatabase |> Database.MySql.MySql.connect
+                let azureSqlConnection = currentApplication.Dependencies.AzureSqlDatabase |> Database.AzureSql.AzureSql.connect
+
+                let! _ =
+                    itemEntity
+                    |> Command.ItemsCommand.create storageAccount mysqlLocalConnection azureSqlConnection  <@> ErrorMessage
+
+                return itemEntity |> Dto.Serialize.itemEntity
             }
     }
 
@@ -163,9 +197,13 @@ let apiRouter =
     |> Remoting.fromContext (fun ctx ->
         // https://zaid-ajaj.github.io/Fable.Remoting/src/dependency-injection.html
         let logger = ctx.GetLogger<IEdcApi>()
+        let logError = Logger.logMessage logger
 
-        Api.edc (Logger.logMessage logger)  // todo - create ApplicationLogger
+        //let logError = eprintf "Error %s"
+
+        Api.edc logError  // todo - create ApplicationLogger
     )
+    //|> Remoting.fromValue (Api.edc (eprintf "%s"))
     |> Remoting.buildHttpHandler
 
 let appRouter = router {

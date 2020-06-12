@@ -12,6 +12,7 @@ open Thoth.Json
 
 open PageItemsModule
 open Shared.Dto.Items
+open Shared.FlatItem
 
 open Component.FlatItems
 

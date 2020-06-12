@@ -21,7 +21,10 @@ type CurrentApplication = {
     Dependencies: Dependencies
 }
 
-and Dependencies = NoDependenciesYet
+and Dependencies = {
+    MysqlDatabase: ConnectionString
+    AzureSqlDatabase: ConnectionString
+}
 
 //
 // Errors
@@ -37,6 +40,30 @@ module InstanceError =
     let format = function
         | InstanceError.VariableNotFoundError name -> sprintf "Environment variable %A for application instance is not set." name
         | InstanceError.InvalidFormatError instanceString -> sprintf "Value %A for application instance is not in correct format or is empty." instanceString
+
+[<RequireQualifiedAccess>]
+type KeyVaultError =
+    | VariableNotFoundError of string
+    | GetSecretError of exn
+
+[<RequireQualifiedAccess>]
+module KeyVaultError =
+    let format = function
+        | KeyVaultError.VariableNotFoundError name -> sprintf "Environment variable %A for Key Vault name is not set." name
+        | KeyVaultError.GetSecretError e -> sprintf "Getting a secret ended with error %A." e.Message
+
+[<RequireQualifiedAccess>]
+type ConnectionStringError =
+    | ConnectionStringMissing of string
+    | MissingPassword of string
+    | GettingPassword of KeyVaultError
+
+[<RequireQualifiedAccess>]
+module ConnectionStringError =
+    let format = function
+        | ConnectionStringError.ConnectionStringMissing name -> sprintf "Environment variable %A for Database Connection string name is not set." name
+        | ConnectionStringError.MissingPassword name -> sprintf "Environment variable %A for Database password is not set." name
+        | ConnectionStringError.GettingPassword error -> error |> KeyVaultError.format // todo check ..
 
 //
 // Current Application module
@@ -85,9 +112,57 @@ module CurrentApplication =
             return
                 environment
                 |> Map.tryFind variableName
-                |> Option.defaultValue "dev"    // todo - use prod as default
+                |> Option.defaultValue "prod"
                 |> Debug.parse
         }
+
+        [<RequireQualifiedAccess>]
+        module KeyVault =
+            open Azure.Identity
+            open Azure.Security.KeyVault.Secrets
+
+            let secret environment secret = asyncResult {
+                let! keyVaultName =
+                    "KEY_VAULT_NAME"
+                    |> getEnvironmentValue environment id KeyVaultError.VariableNotFoundError
+                    |> AsyncResult.ofResult
+
+                let kvUri = sprintf "https://%s.vault.azure.net" keyVaultName
+                let client = SecretClient(Uri(kvUri), DefaultAzureCredential(false))
+
+                let! secretResult =
+                    client.GetSecretAsync(secret)
+                    |> Async.AwaitTask
+                    |> Async.Catch
+                    |> Async.map (Result.ofChoice >@> KeyVaultError.GetSecretError)
+
+                return secretResult.Value.Value
+            }
+
+        [<RequireQualifiedAccess>]
+        module Database =
+            let azureSqlConnectionString environment = asyncResult {
+                let! (ConnectionString connectionString) =
+                    "SQLAZURECONNSTR_mf-edc-db"
+                    |> getEnvironmentValue environment ConnectionString ConnectionStringError.ConnectionStringMissing
+                    |> AsyncResult.ofResult
+
+                let! (DatabasePassword adminPass) =
+                    match "ADMIN_DB_PASS" |> getEnvironmentValue environment DatabasePassword ConnectionStringError.MissingPassword with
+                    | Ok predefinedPassword ->
+                        AsyncResult.ofSuccess predefinedPassword
+                    | _ ->
+                        "mf-edc-admin-pass"
+                        |> KeyVault.secret environment
+                        |> AsyncResult.map DatabasePassword
+                        |> AsyncResult.mapError (KeyVaultError.format >> ConnectionStringError.MissingPassword)
+
+                return connectionString.Replace("{your_password}", adminPass) |> ConnectionString
+            }
+
+            let mysqlLocalConnectionString environment =
+                "MYSQLCONNSTR_localdb"
+                |> getEnvironmentValue environment ConnectionString ConnectionStringError.MissingPassword
 
     let fromEnvironment files =
         result {
@@ -101,6 +176,13 @@ module CurrentApplication =
                 | Dev -> JWTKey.forDevelopment
                 | Prod -> JWTKey.generate()
 
+            let! mysqlConnectionString =
+                Environment.Database.mysqlLocalConnectionString environment <@> ConnectionStringError.format
+
+            let! azureSqlConnectionString =
+                Environment.Database.azureSqlConnectionString environment
+                |> Async.RunSynchronously <@> ConnectionStringError.format
+
             return {
                 Instance = instance
                 TokenKey = tokenKey
@@ -109,7 +191,10 @@ module CurrentApplication =
                 ]
                 //Logger = logger
                 Debug = debug
-                Dependencies = NoDependenciesYet
+                Dependencies = {
+                    MysqlDatabase = mysqlConnectionString
+                    AzureSqlDatabase = azureSqlConnectionString
+                }
             }
         }
 

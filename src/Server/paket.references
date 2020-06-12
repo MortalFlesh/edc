@@ -7,3 +7,5 @@ group Server
     Microsoft.Extensions.Logging.ApplicationInsights
     WindowsAzure.Storage
     Dapper.FSharp
+    Azure.Security.KeyVault.Secrets
+    Azure.Identity

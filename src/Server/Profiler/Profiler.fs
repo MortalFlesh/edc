@@ -82,7 +82,7 @@ module Profiler =
             yield {
                 Id = Profiler.Id "Environment"
                 Label = Some (Profiler.Label "Environment")
-                Value = Profiler.Value (environment |> Seq.length |> sprintf "%A")
+                Value = Profiler.Value (environment.Count |> sprintf "%A")
                 Unit = None
                 ItemColor = None
                 StatusIcon = None

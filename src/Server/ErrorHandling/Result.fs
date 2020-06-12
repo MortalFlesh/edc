@@ -338,6 +338,18 @@ module AsyncResult =
     let ofAsync x : AsyncResult<_, _> =
         x |> Async.map Result.Ok
 
+    /// Lift a Async into an AsyncResult and handles exception into Result
+    let ofAsyncCatch f x : AsyncResult<_, _> =
+        x |> ofAsync |> catch f
+
+    /// Lift a Task into an AsyncResult
+    let ofTask x : AsyncResult<_, _> =
+        x |> Async.AwaitTask |> ofAsync
+
+    /// Lift a Task into an AsyncResult and handles exception into Result
+    let ofTaskCatch f x : AsyncResult<_, _> =
+        x |> ofTask |> catch f
+
     //-----------------------------------
     // Utilities lifted from Async
 
