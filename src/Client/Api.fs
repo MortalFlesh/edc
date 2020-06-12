@@ -90,3 +90,6 @@ let loadData onSuccess onError onAuthorizationError =
 
 let loadItems onSuccess onError onAuthorizationError =
     secure onError >?> (Server.api.LoadItems >> callSecuredApi onSuccess onError onAuthorizationError)
+
+let createItem onSuccess onError onAuthorizationError =
+    secure onError >?> (Server.api.CreateItem >> callSecuredApi onSuccess onError onAuthorizationError)

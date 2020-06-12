@@ -38,10 +38,9 @@
 
         <!-- App model -->
         <Compile Include="Model.fs" />
-
-        <!-- Pages -->
         <Compile Include="Routing.fs" />
 
+        <!-- Pages -->
         <Compile Include="Page/Login/View.fs" />
         <Compile Include="Page/EdcSets/View.fs" />
         <Compile Include="Page/Items/View.fs" />

@@ -34,7 +34,7 @@ type PageAddItemAction =
     | ChangeNote of string
 
     | SaveItem
-    | ItemSaved
+    | ItemSaved of Item
     | ItemSavedWithError of ErrorMessage
 
 type DispatchPageAddItemAction = PageAddItemAction -> unit
@@ -79,16 +79,40 @@ module PageAddItemModel =
             { model with CommonInfo = { model.CommonInfo with Note = note |> String.parse }} |> clearError Note, Cmd.none
 
         | PageAddItemAction.SaveItem ->
-            // todo - validate (Name?)
-            let model =
-                match model.CommonInfo.Name |> String.parse with
-                | Some _ -> { model with SavingStatus = InProgress }
-                | _ -> { model with Errors = (Name, (ErrorMessage "Item must have a name.")) |> model.Errors.Add }
+            match model.CommonInfo.Name |> String.parse with
+            | Some name ->
+                let item: Item = Item.Tool <| Tool.Knife {
+                    Common = {
+                        Name = name
+                        Note = None
+                        Color = None
+                        Tags = []
+                        Links = []
+                        Price = None
+                        Size = None
+                        OwnershipStatus = Own
+                        Product = None
+                        Gallery = None
+                    }
+                }
 
-            model, Cmd.none
+                let create =
+                    Api.createItem
+                        (PageAddItemAction.ItemSaved >> liftAction)
+                        (PageAddItemAction.ItemSavedWithError >> liftAction)
+                        authError
 
-        | PageAddItemAction.ItemSaved ->
-            model, Cmd.none
+                { model with SavingStatus = InProgress }, Cmd.OfAsyncImmediate.result (create item)
+            | _ ->
+                { model with Errors = (Name, (ErrorMessage "Item must have a name.")) |> model.Errors.Add }, Cmd.none
 
-        | PageAddItemAction.ItemSavedWithError ->
-            model, Cmd.none
+        | PageAddItemAction.ItemSaved item ->
+            let data =
+                item
+                |> FlatItem.FlatItem.ofItem
+                |> FlatItem.FlatItem.data
+
+            { model with SavingStatus = Completed }, Cmd.ofMsg (showSuccess (SuccessMessage (sprintf "Item %A was successfully created." data.Common.Name )))
+
+        | PageAddItemAction.ItemSavedWithError e ->
+            { model with SavingStatus = Inactive }, Cmd.ofMsg (showError e)

@@ -305,7 +305,10 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
 
         | GoToItems, { CurrentUser = Some _ } ->
             let page = Items model.PageItemsModel.ItemDetail
-            { model with CurrentPage = page }, Navigation.newUrl (Page.toPath page)
+            { model with CurrentPage = page }, Cmd.batch [
+                Navigation.newUrl (Page.toPath page)
+                page |> pageInitAction
+            ]
 
         | GoToAddItem, { CurrentUser = Some _ } ->
             { model with CurrentPage = AddItem }, Navigation.newUrl (Page.toPath AddItem)
@@ -456,6 +459,11 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
         |> Cmd.batch
 
     | PageAddItemAction pageAction ->
+        let redirect =
+            match pageAction with
+            | PageAddItemAction.ItemSaved _item -> Some (PageAction GoToItems)
+            | _ -> None
+
         let pageModel, action =
             pageAction
             |> PageAddItemModel.update
@@ -465,4 +473,9 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
                 LoggedOutWithError
                 model.PageAddItemModel
 
-        { model with PageAddItemModel = pageModel }, action
+        { model with PageAddItemModel = pageModel }, [
+            Some action
+            redirect |> Option.map Cmd.ofMsg
+        ]
+        |> List.choose id
+        |> Cmd.batch

@@ -118,7 +118,7 @@ module Dto =
             | Food food -> Dto.Items.Food (food |> consumableInfo)
             | Consumable.Other other -> Dto.Items.Consumable.Other (other |> consumableInfo)
 
-        let rec private item: Item -> Dto.Items.Item = function
+        let rec item: Item -> Dto.Items.Item = function
             | Item.Tool t -> Dto.Items.Item.Tool (t |> tool)
             | Item.Container c -> Dto.Items.Item.Container (c |> container)
             | Item.Consumable c -> Dto.Items.Item.Consumable (c |> consumable)

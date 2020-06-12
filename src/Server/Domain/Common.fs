@@ -88,6 +88,11 @@ module IdModule =
     [<RequireQualifiedAccess>]
     module Id =
         let fromGuid = Id
+        let tryParse (id: string) =
+            match Guid.TryParse(id) with
+            | true, id -> Some (Id id)
+            | _ -> None
+
         let create () = Guid.NewGuid() |> Id
         let value (Id id) = id |> string
 
@@ -124,3 +129,7 @@ type CommonInfo = {
     Product: ProductInfo option
     Gallery: Gallery option
 }
+
+[<RequireQualifiedAccess>]
+module CommonInfo =
+    let name ({ Name = name }: CommonInfo) = name

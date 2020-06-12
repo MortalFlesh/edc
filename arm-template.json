@@ -94,6 +94,10 @@
                         {
                             "name": "DEBUG",
                             "value": "dev"
+                        },
+                        {
+                            "name": "KEY_VAULT_NAME",
+                            "value": "edc-kv"
                         }
                     ]
                 }

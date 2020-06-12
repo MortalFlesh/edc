@@ -5,5 +5,7 @@ group Server
     JsonWebToken
     Microsoft.ApplicationInsights.AspNetCore
     Microsoft.Extensions.Logging.ApplicationInsights
-    WindowsAzure.Storage
+    Microsoft.Azure.Cosmos.Table
     Dapper.FSharp
+    Azure.Security.KeyVault.Secrets
+    Azure.Identity
