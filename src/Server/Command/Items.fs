@@ -3,18 +3,18 @@ namespace MF.EDC.Command
 open ErrorHandling
 open MF.EDC
 
-type CreateItemCommand = Command<ItemEntity, ItemEntity, string>
+type CreateItemCommand = Command<Item, ItemEntity, string>
 
 [<RequireQualifiedAccess>]
 module ItemsCommand =
 
     module private StorageTable =
         open Microsoft.Azure.Cosmos.Table
-        open Database.StorageTable
+        open Database.CloudStorage
 
-        let create (storageAccount: CloudStorageAccount) (item: ItemEntity) =
+        let createForUser (storageAccount: CloudStorageAccount) username (item: ItemEntity) =
             item
-            |> Table.insert storageAccount
+            |> Table.insertItem storageAccount (Owner.User username)
             |> AsyncResult.map ignore
 
     module private MySql =
@@ -33,17 +33,20 @@ module ItemsCommand =
 
     open ErrorHandling.AsyncResult.Operators
 
-    let create storageAccount mysqlLocalConnection azureSqlConnection: CreateItemCommand = fun item -> asyncResult {
-        printfn "=========================\nCreate item\n========================="
+    let create storageAccount mysqlLocalConnection azureSqlConnection username: CreateItemCommand = fun item -> asyncResult {
+        let itemEntity = {
+            Id = Id.create()
+            Item = item
+        }
+
         let! results =
             [
-                item |> StorageTable.create storageAccount >>* (fun _ -> printfn "StorageTable create done!") >>@ (eprintfn "StorageTable.Error: %A")
+                itemEntity |> StorageTable.createForUser storageAccount username <@> Database.CloudStorage.TableError.format >>@ (eprintfn "StorageTable.Error: %A")  // todo logError
                 //item |> MySql.create mysqlLocalConnection >>* (fun _ -> printfn "MySql create done!") >>@ (eprintfn "MySql.Error: %A")
                 //item |> AzureSql.create azureSqlConnection >>* (fun _ -> printfn "AzureSql create done!") >>@ (eprintfn "AzureSql.Error: %A")
             ]
             |> Async.Parallel
             |> AsyncResult.ofAsyncCatch (fun e -> e.Message)
-        printfn "=========================\nDone\n========================="
 
         let! _ =
             results
@@ -51,5 +54,5 @@ module ItemsCommand =
             |> Result.sequence
             |> AsyncResult.ofResult
 
-        return item
+        return itemEntity
     }

@@ -13,7 +13,7 @@ open Fulma.Extensions.Wikiki
 open Component.Common
 
 open Shared
-open Shared.FlatItem
+open FlatItem
 
 [<RequireQualifiedAccess>]
 module FlatItem =
@@ -42,21 +42,33 @@ module FlatItem =
 
                 yield! fItem.Common.Tags |> List.map (fun t -> li [] [ t |> Tag.link ])
                 yield! fItem.Common.Links |> List.map (fun l -> li [] [ l |> Link.link ])
+
+                yield!
+                    match fItem.Common.Product with
+                    | Some product ->
+                        [
+                            li [] [ strong [] [ str "Product" ] ]
+                            li [] [ str (product.Id) ]
+                            li [] [ str (product.Name) ]
+                            li [] [ str (product.Manufacturer) ]
+                        ]
+                    | _ -> []
             ]
 
-            match fItem.Common.Size with
+            match fItem.Common.Weight, fItem.Common.Dimensions with
             // todo - move to Size component
-            | Some size ->
+            | Some _, _
+            | _, Some _ ->
                 fieldset [] [
                     legend [] [
                         str "Size"
                     ]
 
-                    match size.Weight with
+                    match fItem.Common.Weight with
                     | Some weight -> div [] [ weight |> sprintf "Weight: %Ag" |> str ]
                     | _ -> ()
 
-                    match size.Dimensions with
+                    match fItem.Common.Dimensions with
                     | Some { Height = height; Width = width; Length = length } -> div [] [ sprintf "Dimensions (H*W*L): %Amm * %Amm * %Amm" height width length |> str ]
                     | _ -> ()
                 ]

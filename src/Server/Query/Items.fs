@@ -6,11 +6,13 @@ open MF.EDC
 [<RequireQualifiedAccess>]
 type ItemsError =
     | Runtime of string
+    | TableError of Database.CloudStorage.TableError
 
 [<RequireQualifiedAccess>]
 module ItemsError =
     let format = function
         | ItemsError.Runtime error -> error
+        | ItemsError.TableError error -> error |> Database.CloudStorage.TableError.format
 
 type LoadItemsQuery = Query<ItemEntity list, ItemsError>
 
@@ -29,6 +31,8 @@ module ItemsQuery =
                     }
                     OwnershipStatus = Own
                     Product = Some {
+                        Id = Id.create()
+                        Manufacturer = Manufacturer "Gerber"
                         Name = "Gerber Motelius"
                         Price = { Amount = 1200.; Currency = Czk }
                         Ean = None
@@ -51,6 +55,8 @@ module ItemsQuery =
                     Price = Some { Amount = 1200.; Currency = Czk }
                     OwnershipStatus = Wish
                     Product = Some {
+                        Id = Id.create()
+                        Manufacturer = Manufacturer "Gerber"
                         Name = "Gerber Metolius Foldable"
                         Price = {
                             Amount = 1200.
@@ -82,19 +88,18 @@ module ItemsQuery =
         let load connection =
             AzureSql.select connection () <@> ItemsError.Runtime
 
-    module private StorageTable =
-        open Database.StorageTable
+    module private CloudStorage =
+        open Database.CloudStorage
 
-        let load storageAccount =
-            Table.select storageAccount () <@> ItemsError.Runtime
-            |> tee (fun _ -> printfn "Load storage done ...")
+        let loadUserItems logError storageAccount username =
+            Table.selectItems logError storageAccount (Owner.User username) <@> ItemsError.TableError
 
-    let load storageAccount mysqlConnection azureSqlConnection: LoadItemsQuery = asyncResult {
-        printfn "=========================\nLoad items\n========================="
-        let! items = StorageTable.load storageAccount >>* (fun _ -> printfn "StorageTable load done!") >>@ (ItemsError.format >> eprintfn "StorageTable load failed! %A")
+    let load logError storageAccount mysqlConnection azureSqlConnection username: LoadItemsQuery = asyncResult {
+        let! items = CloudStorage.loadUserItems logError storageAccount username >>@ (ItemsError.format >> eprintfn "StorageTable load failed! %A")  // todo - log error
+
         (* let! results =
             [
-                StorageTable.load storageAccount >>* (fun _ -> printfn "StorageTable load done!") >>@ (ItemsError.format >> eprintfn "StorageTable load failed! %A")
+                CloudStorage.load storageAccount >>* (fun _ -> printfn "StorageTable load done!") >>@ (ItemsError.format >> eprintfn "StorageTable load failed! %A")
                 // connection refused ?
 
                 //MySql.load mysqlConnection >>* (fun _ -> printfn "MySql load done!") >>@ (ItemsError.format >> eprintfn "MySql load failed! %A")
@@ -107,7 +112,6 @@ module ItemsQuery =
             ]
             |> Async.Parallel
             |> AsyncResult.ofAsyncCatch (fun e -> e.Message |> ItemsError.Runtime) *)
-        printfn "=========================\nDone\n========================="
 
         (* let! items =
             results

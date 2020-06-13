@@ -234,7 +234,7 @@ let mutable refreshingProfilerStarted = false
 let refreshProfiler dispatch =
     if not refreshingProfilerStarted then
         async {
-            printfn "[Profiler] Refresh every 15s ..."
+            printfn "[Profiler] Refresh every 60s ..."
 
             while true do
                 let! action =
@@ -245,7 +245,7 @@ let refreshProfiler dispatch =
                     |> Api.loadProfiler (ProfilerAction.ShowProfiler >> ProfilerAction)
                 dispatch action
 
-                do! Async.Sleep (15 * 1000)
+                do! Async.Sleep (60 * 1000)
         }
         |> Async.StartImmediate
     refreshingProfilerStarted <- true
@@ -282,38 +282,34 @@ let private modifyUrl page =
     |> Page.toPath
     |> Navigation.modifyUrl
 
+let (|IsLoggedIn|_|) = function
+    | { CurrentUser = Some _ } -> Some IsLoggedIn
+    | _ -> None
+
 // The update function computes the next state of the application based on the current state and the incoming events/messages
 // It can also run side-effects (encoded as commands) like calling the server via Http.
 // these commands in turn, can dispatch messages to which the update function will react.
 let update (action : Action) (model : Model) : Model * Cmd<Action> =
     match action with
     | PageAction pageAction ->
-        match pageAction, model with
-        | GoToLogin, { CurrentUser = None } ->
-            { model with CurrentPage = Page.Login }, Navigation.newUrl (Page.toPath Page.Login)
-
-        | Logout, { CurrentUser = Some _ } ->
-            model, Cmd.OfFunc.either User.delete () (fun _ -> LoggedOut) (ErrorMessage.fromExn >> ShowError)
-
-        | GoToAnonymousEdcSets, _ ->
-            let page = AnonymousEdcSets model.PageAnonymousEdcModel.SelectedSet
-            { model with CurrentPage = page }, Navigation.newUrl (Page.toPath page)
-
-        | GoToMyEdcSets, { CurrentUser = Some _ } ->
-            let page = MyEdcSets model.PageMyEdcModel.SelectedSet
-            { model with CurrentPage = page }, Navigation.newUrl (Page.toPath page)
-
-        | GoToItems, { CurrentUser = Some _ } ->
-            let page = Items model.PageItemsModel.ItemDetail
+        let goTo page =
             { model with CurrentPage = page }, Cmd.batch [
                 Navigation.newUrl (Page.toPath page)
                 page |> pageInitAction
             ]
 
-        | GoToAddItem, { CurrentUser = Some _ } ->
-            { model with CurrentPage = AddItem }, Navigation.newUrl (Page.toPath AddItem)
+        match pageAction, model with
+        | Logout, IsLoggedIn ->
+            model, Cmd.OfFunc.either User.delete () (fun _ -> LoggedOut) (ErrorMessage.fromExn >> ShowError)
 
-        | _, { CurrentUser = None } -> model, Cmd.ofMsg (PageAction GoToLogin)
+        | GoToAnonymousEdcSets, _ -> AnonymousEdcSets model.PageAnonymousEdcModel.SelectedSet |> goTo
+        | GoToMyEdcSets, IsLoggedIn -> MyEdcSets model.PageMyEdcModel.SelectedSet |> goTo
+        | GoToItems, IsLoggedIn -> Items model.PageItemsModel.ItemDetail |> goTo
+        | GoToAddItem, IsLoggedIn -> AddItem |> goTo
+
+        | GoToLogin, IsLoggedIn
+        | _, { CurrentUser = None } -> goTo Login
+
         | _ -> model, Cmd.none
 
     // Global Messages

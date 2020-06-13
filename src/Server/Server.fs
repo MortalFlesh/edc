@@ -23,6 +23,15 @@ module Api =
                 authorize
                 action
 
+        let inline (>??>) authorize action =
+            Authorize.authorizeActionWithUser
+                currentApplication.Instance
+                currentApplication.TokenKey
+                currentApplication.KeysForToken
+                logError
+                authorize
+                action
+
         {
             //
             // Public actions
@@ -54,7 +63,7 @@ module Api =
                 return
                     match currentApplication.Debug with
                     | Dev -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A" Dev) |> Some
-                    | Prod when token = Some currentApplication.ProfilerToken -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A with token" Prod) |> Some
+                    | Prod when (Some token) = (Some currentApplication.ProfilerToken) -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A with token" Prod) |> Some
                     | Prod -> None
             }
 
@@ -73,44 +82,44 @@ module Api =
             }
             *)
 
-            LoadItems = Authorize.withLogin >?> fun () -> asyncResult {
+            ValidateTag = Authorize.withLogin >?> fun tag -> asyncResult {
+                let! tag =
+                    tag
+                    |> Tag.parse
+                    |> AsyncResult.ofOption (ErrorMessage "Invalid tag value.")
+
+                return tag |> Dto.Serialize.tag
+            }
+
+            LoadItems = Authorize.withLogin >??> fun user () -> asyncResult {
                 let mySqlLocalConnection = currentApplication.Dependencies.MysqlDatabase |> Database.MySql.MySql.connect
                 let azureSqlConnection = currentApplication.Dependencies.AzureSqlDatabase |> Database.AzureSql.AzureSql.connect
 
                 let! data =
-                    ItemsQuery.load currentApplication.Dependencies.StorageAccount mySqlLocalConnection azureSqlConnection <@> (ItemsError.format >> ErrorMessage)
+                    ItemsQuery.load
+                        logError
+                        currentApplication.Dependencies.StorageAccount
+                        mySqlLocalConnection
+                        azureSqlConnection
+                        user.Username
+                    <@> (ItemsError.format >> ErrorMessage)
 
                 return data |> List.map Dto.Serialize.itemEntity
             }
 
-            CreateItem = Authorize.withLogin >?> fun item -> asyncResult {
-                // todo - deserialize item
-                let fItem = item |> FlatItem.FlatItem.ofItem |> FlatItem.FlatItem.data
-                let itemEntity =
-                    {
-                        Id = Id.create()
-                        Item = Item.Tool (Knife {
-                            Common = {
-                                Name = fItem.Common.Name
-                                Note = None
-                                Color = None
-                                Tags = []
-                                Links = []
-                                Price = None
-                                Size = None
-                                OwnershipStatus = Own
-                                Product = None
-                                Gallery = None
-                            }
-                        })
-                    }
+            CreateItem = Authorize.withLogin >??> fun user itemDto -> asyncResult {
+                let! item =
+                    itemDto
+                    |> Dto.Deserialize.item
+                    |> AsyncResult.ofResult <@> (sprintf "%A" >> ErrorMessage)
+                    //|> AsyncResult.ofResult <@> (DeserializeItemError.format >> ErrorMessage)
 
                 let mysqlLocalConnection = currentApplication.Dependencies.MysqlDatabase |> Database.MySql.MySql.connect
                 let azureSqlConnection = currentApplication.Dependencies.AzureSqlDatabase |> Database.AzureSql.AzureSql.connect
 
-                let! _ =
-                    itemEntity
-                    |> Command.ItemsCommand.create currentApplication.Dependencies.StorageAccount mysqlLocalConnection azureSqlConnection  <@> ErrorMessage
+                let! itemEntity =
+                    item
+                    |> Command.ItemsCommand.create currentApplication.Dependencies.StorageAccount mysqlLocalConnection azureSqlConnection user.Username <@> ErrorMessage
 
                 return itemEntity.Item |> Dto.Serialize.item
             }

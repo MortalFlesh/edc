@@ -40,14 +40,14 @@
         <Compile Include="Domain/Set.fs" />
 
         <!-- Security -->
-        <Compile Include="Security/Token.fs" />
         <Compile Include="Security/User.fs" />
+        <Compile Include="Security/Token.fs" />
 
         <!-- Dto -->
         <Compile Include="Dto.fs" />
 
         <!-- Database -->
-        <Compile Include="Database/StorageTable.fs" />
+        <Compile Include="Database/CloudStorage.fs" />
         <Compile Include="Database/LocalMysql.fs" />
         <Compile Include="Database/AzureSql.fs" />
 

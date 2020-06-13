@@ -26,19 +26,6 @@ module FileSystem =
         if File.Exists filePath then File.ReadAllText(filePath) |> Some
         else None
 
-[<AutoOpen>]
-module Options =
-    type MaybeBuilder () =
-        member __.Bind(o, f) =
-            match o with
-            | None -> None
-            | Some a -> f a
-
-        member __.Return(x) = Some x
-        member __.ReturnFrom(x) = x
-
-    let maybe = MaybeBuilder()
-
 [<RequireQualifiedAccess>]
 type TimeoutError =
     | Timeouted
@@ -71,11 +58,24 @@ module InstanceModule =
 
     [<RequireQualifiedAccess>]
     module Instance =
-        /// Todo - remove - now just for debuggging
-        let create = Instance
-
         let parse = function
             | null | "" -> None
             | instance -> Some (Instance instance)
 
         let value (Instance instance) = instance
+
+[<RequireQualifiedAccess>]
+module String =
+    let trim (string: string) =
+        string.Trim()
+
+    let startsWith (prefix: string) (string: string) =
+        string.StartsWith(prefix)
+
+    let startsWithOneOf (prefixes: string list) (string: string) =
+        prefixes
+        |> List.exists (fun prefix -> startsWith prefix string)
+
+    let nullable = function
+        | null | "" -> null
+        | string -> string

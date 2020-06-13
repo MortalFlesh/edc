@@ -65,6 +65,7 @@ module Dto =
         [<RequireQualifiedAccess>]
         module Weight =
             let ofGrams grams = Weight (grams * 1<Gram>)
+            let value (Weight w) = w |> int
 
         type Dimensions = {
             Height: int<Milimeter>
@@ -75,11 +76,6 @@ module Dto =
         [<RequireQualifiedAccess>]
         module Dimensions =
             let ofMilimeter (size: int) = size * 1<Milimeter>
-
-        type Size = {
-            Weight: Weight option
-            Dimensions: Dimensions option
-        }
 
         //
         // Product
@@ -92,10 +88,16 @@ module Dto =
 
         type Ean = Ean of string
 
+        [<RequireQualifiedAccess>]
+        module Ean =
+            let value (Ean ean) = ean
+
         type Link = Link of string
 
         type ProductInfo = {
+            Id: string
             Name: string
+            Manufacturer: string
             Price: Price
             Ean: Ean option
             Links: Link list
@@ -132,9 +134,33 @@ module Dto =
             | ToSell
             | Ordered
 
+        [<RequireQualifiedAccess>]
+        module OwnershipStatus =
+            let parse = function
+                | "Own" -> Some Own
+                | "Wish" -> Some Wish
+                | "Maybe" -> Some Maybe
+                | "Idea" -> Some Idea
+                | "ToBuy" -> Some ToBuy
+                | "ToSell" -> Some ToSell
+                | "Ordered" -> Some Ordered
+                | _ -> None
+
         type Color = Color of string
 
-        type Tag = Tag of string
+        type Slug = Slug of string
+        type TagName = TagName of string
+
+        type WrongTag = WrongTag of string // todo - move to model, where there will be one
+
+        type Tag = {
+            Slug: Slug
+            Name: TagName
+        }
+
+        [<RequireQualifiedAccess>]
+        module Tag =
+            let value ({ Name = (TagName tag )}: Tag) = tag
 
         type CommonInfo = {
             Name: string
@@ -143,7 +169,8 @@ module Dto =
             Tags: Tag list
             Links: Link list
             Price: Price option
-            Size: Size option
+            Weight: Weight option
+            Dimensions: Dimensions option
             OwnershipStatus: OwnershipStatus
             Product: ProductInfo option
             Gallery: Gallery option
@@ -164,7 +191,7 @@ module Dto =
             | MultiTool of ToolInfo
             | Knife of ToolInfo
             | Gun of ToolInfo
-            | Other of ToolInfo
+            | OtherTool of ToolInfo
 
         //
         // Consumables
@@ -176,7 +203,7 @@ module Dto =
 
         type Consumable =
             | Food of ConsumableInfo
-            | Other of ConsumableInfo
+            | OtherConsumable of ConsumableInfo
 
         //
         // Items
@@ -197,13 +224,13 @@ module Dto =
             | Organizer of ContainerInfo
             | Pocket of ContainerInfo
             | Panel of ContainerInfo
-            | Other of ContainerInfo
+            | OtherContainer of ContainerInfo
 
         and ContainerInfo = {
             Common: CommonInfo
 
             Items: ItemInContainer list
-            TotalSize: Size
+            TotalWeight: Weight
         }
 
         and ItemInContainer = {
@@ -239,162 +266,6 @@ module Dto =
             Description: string option
             Inventory: ContainerEntity list
         }
-
-module FlatItem =
-    open Dto.Common
-    open Dto.Items
-
-    //
-    // Flatten types, to simplify a view
-    //
-
-    type FlatItemData<'Original> = {
-        Common: CommonInfo
-        Type: string
-        SubType: string option
-        Original: 'Original
-    }
-
-    type FlatItemEntity<'Original> = {
-        Id: Id
-        Item: FlatItemData<'Original>
-    }
-
-    [<RequireQualifiedAccess>]
-    type FlatItem<'Original> =
-        | Entity of FlatItemEntity<'Original>
-        | Data of FlatItemData<'Original>
-
-    [<RequireQualifiedAccess>]
-    module FlatItem =
-        let private mapOriginal original = function
-            | FlatItem.Entity { Id = id; Item = item } ->
-                FlatItem.Entity {
-                    Id = id
-                    Item = {
-                        Common = item.Common
-                        Type = item.Type
-                        SubType = item.SubType
-                        Original = original
-                    }
-                }
-            | FlatItem.Data item ->
-                FlatItem.Data {
-                    Common = item.Common
-                    Type = item.Type
-                    SubType = item.SubType
-                    Original = original
-                }
-
-        let data = function
-            | FlatItem.Entity { Item = item }
-            | FlatItem.Data item -> item
-
-        let entity = function
-            | FlatItem.Entity entity -> Some entity
-            | _ -> None
-
-        let ofTool = FlatItem.Data << function
-            | MultiTool { Common = common } as original ->
-                {
-                    Common = common
-                    Type = "Tool"
-                    SubType = Some "MultiTool"
-                    Original = original
-                }
-            | Knife { Common = common } as original ->
-                {
-                    Common = common
-                    Type = "Tool"
-                    SubType = Some "Knife"
-                    Original = original
-                }
-            | Gun { Common = common } as original ->
-                {
-                    Common = common
-                    Type = "Tool"
-                    SubType = Some "Gun"
-                    Original = original
-                }
-            | Tool.Other { Common = common } as original ->
-                {
-                    Common = common
-                    Type = "Tool"
-                    SubType = None
-                    Original = original
-                }
-
-        let ofContainer = FlatItem.Data << function
-            | BagPack bagPack as original ->
-                {
-                    Common = bagPack.Common
-                    Type = "Container"
-                    SubType = Some "BagPack"
-                    Original = original
-                }
-            | Organizer organizer as original ->
-                {
-                    Common = organizer.Common
-                    Type = "Container"
-                    SubType = Some "Organizer"
-                    Original = original
-                }
-            | Pocket pocket as original ->
-                {
-                    Common = pocket.Common
-                    Type = "Container"
-                    SubType = Some "Pocket"
-                    Original = original
-                }
-            | Panel panel as original ->
-                {
-                    Common = panel.Common
-                    Type = "Container"
-                    SubType = Some "Panel"
-                    Original = original
-                }
-            | Other other as original ->
-                {
-                    Common = other.Common
-                    Type = "Container"
-                    SubType = None
-                    Original = original
-                }
-
-        let ofConsumable = FlatItem.Data << function
-            | Food food as original ->
-                {
-                    Common = food.Common
-                    Type = "Consumable"
-                    SubType = Some "Food"
-                    Original = original
-                }
-            | Consumable.Other other as original ->
-                {
-                    Common = other.Common
-                    Type = "Consumable"
-                    SubType = None
-                    Original = original
-                }
-
-        let ofItem = function
-            | Item.Tool tool as original -> tool |> ofTool |> mapOriginal original
-            | Item.Container container as original -> container |> ofContainer |> mapOriginal original
-            | Item.Consumable consumable as original -> consumable |> ofConsumable |> mapOriginal original
-
-        let ofItemEntity ({ Id = id; Item = item }: ItemEntity) =
-            FlatItem.Entity {
-                Id = id;
-                Item = item |> ofItem |> data
-            }
-
-    [<RequireQualifiedAccess>]
-    module FlatItemEntity =
-        let ofItemEntity ({ Id = id; Item = item }: ItemEntity) =
-            {
-                Id = id;
-                Item = item |> FlatItem.ofItem |> FlatItem.data
-            }
 
 //
 // Routing, etc.
@@ -474,6 +345,7 @@ module Profiler =
 //
 
 open Dto.Login
+open Dto.Common
 open Dto.Items
 open Dto.Edc
 
@@ -509,6 +381,8 @@ type IEdcApi = {
 
         LoadData: SecureRequest<RequestData> -> SecuredAsyncResult<SecuredData, ErrorMessage>
     *)
+    ValidateTag: SecureRequest<string> -> SecuredAsyncResult<Tag, ErrorMessage>
+
     LoadItems: SecureRequest<unit> -> SecuredAsyncResult<ItemEntity list, ErrorMessage>
     CreateItem: SecureRequest<Item> -> SecuredAsyncResult<Item, ErrorMessage>
 }

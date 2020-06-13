@@ -3,6 +3,7 @@ namespace MF.EDC.Database
 open MF.EDC
 
 module MySql =
+    open ErrorHandling
 
     type ItemDbEntity = {
         Id: string

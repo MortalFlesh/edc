@@ -10,3 +10,4 @@ group Client
     Fulma.Extensions.Wikiki.Quickview
     Fulma.Extensions.Wikiki.Tooltip
     Thoth.Elmish.Debouncer
+    Fable.Validation

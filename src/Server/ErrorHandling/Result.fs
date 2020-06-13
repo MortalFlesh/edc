@@ -348,6 +348,10 @@ module AsyncResult =
     let ofResult x : AsyncResult<_, _> =
         x |> Async.retn
 
+    /// Lift an Option into an AsyncResult
+    let ofOption e x : AsyncResult<_, _> =
+        x |> Result.ofOption e |> ofResult
+
     /// Lift a Async into an AsyncResult
     let ofAsync x : AsyncResult<_, _> =
         x |> Async.map Result.Ok

@@ -75,3 +75,31 @@ module Authorize =
 
             return renewedToken, response
         }
+
+    /// Helper function to create an Operator for easier authorization with user
+    let authorizeActionWithUser
+        (appInstance: Instance)
+        (appKey: JWTKey)
+        (keysForToken: JWTKey list)
+        (logAuthorizationError: string -> unit)
+        (authorize: Authorize<'RequestData>)
+        (action: User -> 'RequestData -> AsyncResult<'ResponseData, ErrorMessage>)
+        (request: SecureRequest<'RequestData>): AsyncResult<RenewedToken * 'ResponseData, SecuredRequestError<ErrorMessage>>
+        = asyncResult {
+            let! (renewedToken, requestData) =
+                request
+                |> authorize appInstance appKey keysForToken
+                |> AsyncResult.ofResult <@> (AuthorizationError.format logAuthorizationError)
+
+            let! user =
+                renewedToken
+                |> JWTToken.userData appInstance appKey
+                |> AsyncResult.ofResult <@> (fun _ -> SecuredRequestError.OtherError (ErrorMessage "Unexpected JWT error."))
+                >>@ (sprintf "Unexpected Renewed JWT error: %A" >> logAuthorizationError)
+
+            let! response =
+                requestData
+                |> action user <@> SecuredRequestError.OtherError
+
+            return renewedToken, response
+        }

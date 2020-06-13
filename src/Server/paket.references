@@ -9,3 +9,4 @@ group Server
     Dapper.FSharp
     Azure.Security.KeyVault.Secrets
     Azure.Identity
+    Slugify.Core

@@ -128,3 +128,22 @@ nav.navbar {
   overflow-y: scroll;
 }
 
+.tag-input-list {
+  background-color: white;
+  border: 1px solid #dbdbdb;
+  margin-left: 1px;
+
+  > .tag {
+    margin: 7px 2px auto 2px ;
+  }
+}
+
+// Border helpers
+
+.no-border-left {
+  border-left: none!important;
+}
+
+.no-border-right {
+  border-right: none!important;
+}

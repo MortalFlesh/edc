@@ -9,11 +9,11 @@ group Server
     nuget Fable.Remoting.Giraffe ~> 3
     nuget Microsoft.ApplicationInsights.AspNetCore
     nuget Microsoft.Extensions.Logging.ApplicationInsights
-    #nuget WindowsAzure.Storage  // todo - use Cosmos.Tables
     nuget Microsoft.Azure.Cosmos.Table
     nuget Dapper.FSharp ~> 1.9
     nuget Azure.Security.KeyVault.Secrets
     nuget Azure.Identity
+    nuget Slugify.Core ~> 2.3
 
 group Client
     source https://api.nuget.org/v3/index.json
@@ -32,6 +32,13 @@ group Client
     nuget Fulma.Extensions.Wikiki.Quickview ~> 2
     nuget Fulma.Extensions.Wikiki.Tooltip ~> 3
     nuget Thoth.Elmish.Debouncer ~> 1.0
+    nuget Fable.Validation ~> 0.2
+
+group Tests
+    storage none
+    source https://api.nuget.org/v3/index.json
+    nuget Expecto
+    nuget YoloDev.Expecto.TestSdk
 
 group Build
     source https://api.nuget.org/v3/index.json

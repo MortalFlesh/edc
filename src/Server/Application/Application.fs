@@ -19,7 +19,7 @@ type CurrentApplication = {
     KeysForToken: JWTKey list
     //Logger: ApplicationLogger
     Debug: Debug
-    ProfilerToken: Shared.Profiler.Token
+    ProfilerToken: Shared.Profiler.Token option
     AppInsightKey: AppInsightKey option
     PublicPath: PublicPath
     Dependencies: Dependencies
@@ -48,14 +48,14 @@ module InstanceError =
 
 [<RequireQualifiedAccess>]
 type KeyVaultError =
-    | VariableNotFoundError of string
-    | GetSecretError of exn
+    | VariableNotFoundError of string * secret: string
+    | GetSecretError of exn * secret: string
 
 [<RequireQualifiedAccess>]
 module KeyVaultError =
     let format = function
-        | KeyVaultError.VariableNotFoundError name -> sprintf "Environment variable %A for Key Vault name is not set." name
-        | KeyVaultError.GetSecretError e -> sprintf "Getting a secret ended with error %A." e.Message
+        | KeyVaultError.VariableNotFoundError (name, secret) -> sprintf "Secret %A can not be get from kv due to: environment variable %A for Key Vault name is not set." secret name
+        | KeyVaultError.GetSecretError (e, secret) -> sprintf "Getting a secret %A ended with error %A." secret e.Message
 
 [<RequireQualifiedAccess>]
 type ConnectionStringError =
@@ -127,7 +127,7 @@ module CurrentApplication =
             let secret environment keyVaultEnvVar secret = asyncResult {
                 let! keyVaultName =
                     keyVaultEnvVar
-                    |> getEnvironmentValue environment id KeyVaultError.VariableNotFoundError
+                    |> getEnvironmentValue environment id (fun envVar -> KeyVaultError.VariableNotFoundError (envVar, secret))
                     |> AsyncResult.ofResult
 
                 let kvUri = sprintf "https://%s.vault.azure.net" keyVaultName
@@ -135,7 +135,7 @@ module CurrentApplication =
 
                 let! secretResult =
                     client.GetSecretAsync(secret)
-                    |> AsyncResult.ofTaskCatch KeyVaultError.GetSecretError
+                    |> AsyncResult.ofTaskCatch (fun e -> KeyVaultError.GetSecretError (e, secret))
 
                 return secretResult.Value.Value
             }
@@ -173,21 +173,20 @@ module CurrentApplication =
             let mysqlLocalConnectionString environment =
                 getEnvironmentValue environment (ConnectionString >> MySqlConnectionString) ConnectionStringError.MissingPassword
 
-        let profilerToken environment kvSecret (envVar, kvKey) = result {
+        let profilerToken environment kvSecret (envVar, kvKey) =
             let token =
                 envVar
                 |> getEnvironmentValue environment Shared.Profiler.Token ignore
 
-            return!
-                match token with
-                | Ok token -> Ok token
-                | _ ->
-                    kvKey
-                    |> kvSecret
-                    |> AsyncResult.map Shared.Profiler.Token
-                    |> AsyncResult.mapError KeyVaultError.format
-                    |> Async.RunSynchronously
-        }
+            match token with
+            | Ok token -> Some token
+            | _ ->
+                kvKey
+                |> kvSecret
+                |> AsyncResult.map Shared.Profiler.Token
+                |> AsyncResult.mapError KeyVaultError.format
+                |> Async.RunSynchronously
+                |> Result.toOption
 
         let publicPath environment =
             getEnvironmentValue environment PublicPath ignore
@@ -218,7 +217,7 @@ module CurrentApplication =
                 |> Environment.Database.azureSqlConnectionString environment kvSecret
                 |> Async.RunSynchronously <@> ConnectionStringError.format
 
-            let! profilerToken = ("PROFILER_TOKEN", "profiler-token") |> Environment.profilerToken environment kvSecret
+            let profilerToken = ("PROFILER_TOKEN", "profiler-token") |> Environment.profilerToken environment kvSecret
             let! publicPath = "public_path" |> Environment.publicPath environment
             let appInsightKey = "APPINSIGHTS_INSTRUMENTATIONKEY" |> Environment.appInsightKey environment
 
