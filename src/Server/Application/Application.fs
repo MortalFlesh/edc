@@ -18,6 +18,7 @@ type CurrentApplication = {
     KeysForToken: JWTKey list
     //Logger: ApplicationLogger
     Debug: Debug
+    ProfilerToken: Shared.Profiler.Token
     Dependencies: Dependencies
 }
 
@@ -141,18 +142,18 @@ module CurrentApplication =
 
         [<RequireQualifiedAccess>]
         module Database =
-            let azureSqlConnectionString environment = asyncResult {
+            let azureSqlConnectionString environment (connectionStringVarName, adminPassEnvVar, adminPassSecret) = asyncResult {
                 let! (ConnectionString connectionString) =
-                    "SQLAZURECONNSTR_mf-edc-db"
+                    connectionStringVarName
                     |> getEnvironmentValue environment ConnectionString ConnectionStringError.ConnectionStringMissing
                     |> AsyncResult.ofResult
 
                 let! (DatabasePassword adminPass) =
-                    match "ADMIN_DB_PASS" |> getEnvironmentValue environment DatabasePassword ConnectionStringError.MissingPassword with
+                    match adminPassEnvVar |> getEnvironmentValue environment DatabasePassword ConnectionStringError.MissingPassword with
                     | Ok predefinedPassword ->
                         AsyncResult.ofSuccess predefinedPassword
                     | _ ->
-                        "mf-edc-admin-pass"
+                        adminPassSecret
                         |> KeyVault.secret environment
                         |> AsyncResult.map DatabasePassword
                         |> AsyncResult.mapError (KeyVaultError.format >> ConnectionStringError.MissingPassword)
@@ -161,8 +162,23 @@ module CurrentApplication =
             }
 
             let mysqlLocalConnectionString environment =
-                "MYSQLCONNSTR_localdb"
-                |> getEnvironmentValue environment (ConnectionString >> MySqlConnectionString) ConnectionStringError.MissingPassword
+                getEnvironmentValue environment (ConnectionString >> MySqlConnectionString) ConnectionStringError.MissingPassword
+
+        let profilerToken environment (envVar, kvKey) = result {
+            let token =
+                envVar
+                |> getEnvironmentValue environment Shared.Profiler.Token ignore
+
+            return!
+                match token with
+                | Ok token -> Ok token
+                | _ ->
+                    kvKey
+                    |> KeyVault.secret environment
+                    |> AsyncResult.map Shared.Profiler.Token
+                    |> AsyncResult.mapError KeyVaultError.format
+                    |> Async.RunSynchronously
+        }
 
     let fromEnvironment files =
         result {
@@ -177,11 +193,17 @@ module CurrentApplication =
                 | Prod -> JWTKey.generate()
 
             let! mysqlConnectionString =
-                Environment.Database.mysqlLocalConnectionString environment <@> ConnectionStringError.format
+                "MYSQLCONNSTR_localdb"
+                |> Environment.Database.mysqlLocalConnectionString environment <@> ConnectionStringError.format
 
             let! azureSqlConnectionString =
-                Environment.Database.azureSqlConnectionString environment
+                ("SQLAZURECONNSTR_mf-edc-db", "ADMIN_DB_PASS", "mf-edc-admin-pass")
+                |> Environment.Database.azureSqlConnectionString environment
                 |> Async.RunSynchronously <@> ConnectionStringError.format
+
+            let! profilerToken =
+                ("PROFILER_TOKEN", "profiler-token")
+                |> Environment.profilerToken environment
 
             return {
                 Instance = instance
@@ -191,6 +213,7 @@ module CurrentApplication =
                 ]
                 //Logger = logger
                 Debug = debug
+                ProfilerToken = profilerToken
                 Dependencies = {
                     MysqlDatabase = mysqlConnectionString
                     AzureSqlDatabase = azureSqlConnectionString

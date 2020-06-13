@@ -10,8 +10,6 @@ module Profiler =
 
     open Shared
 
-    let token = Profiler.Token "...todo - read on startup..."
-
     let private queryItem color query: Profiler.DetailItem =
         let { Target = (Target (method, Url target)); Created = created } = query.Target
 

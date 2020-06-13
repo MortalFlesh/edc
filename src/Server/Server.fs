@@ -34,6 +34,7 @@ let currentApplication =
                     tokenKey
                 ]
                 Debug = Dev
+                ProfilerToken = Profiler.Token "... todo ..."
                 Dependencies = {
                     MysqlDatabase = MySqlConnectionString (ConnectionString "... todo ...")
                     AzureSqlDatabase = AzureSqlConnectionString (ConnectionString "... todo ...")
@@ -100,7 +101,7 @@ module Api =
                 return
                     match currentApplication.Debug with
                     | Dev -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A" Dev) |> Some
-                    | Prod when token = Some Profiler.token -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A with token" Prod) |> Some
+                    | Prod when token = Some currentApplication.ProfilerToken -> Profiler.init currentApplication.Instance (Environment.getEnvs()) (sprintf "%A with token" Prod) |> Some
                     | Prod -> None
             }
 
