@@ -57,6 +57,8 @@ module Ean =
     let value (Ean ean) = ean
 
 type Link = Link of string
+    // todo - of Uri, crete: url encode (bez mezer!)
+    // - strip: fbclick, gclick, #utm
 
 [<RequireQualifiedAccess>]
 module Link =

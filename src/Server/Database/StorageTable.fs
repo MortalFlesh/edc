@@ -6,6 +6,17 @@ module StorageTable =
     open Microsoft.Azure.Cosmos.Table
     open Shared.FlatItem
 
+    (* 
+    Tips & Knowledge
+    - @see https://tappable.co.uk/5-performance-optimising-tips-in-azure-table-storage/
+    - PK is partition, which holds max of 500 entities per second -> it could be user-identificator, and it could be "his" items
+    - Query
+        | Point of PK * RK -> fastest
+        | Row scan of PK -> still excelent performance
+        | Partition scan of PK list -> it looks multiple parttions -> should be avoid!
+        | Table scan -> the worst, it looks in all partittions
+     *)
+
     type ItemDbEntity(id, (* commonInfo: Shared.Dto.Common.CommonInfo,  *)itemType: string, subType: string) =
         inherit TableEntity(
             partitionKey = itemType, // todo - create better? type-subtype?

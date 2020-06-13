@@ -1,55 +1,7 @@
-open System.IO
-open System.Threading.Tasks
-
-open System
-open Microsoft.AspNetCore.Builder
-open Microsoft.Extensions.DependencyInjection
-open FSharp.Control.Tasks.V2
-open Giraffe
-open Saturn
-
 open ErrorHandling
 
 open Shared
 open MF.EDC
-open MF.EDC.Profiler
-
-open Fable.Remoting.Server
-open Fable.Remoting.Giraffe
-
-open Microsoft.Azure.Cosmos.Table
-
-let currentApplication =
-    [ ".env"; ".dist.env" ]
-    |> CurrentApplication.fromEnvironment
-    // todo |> Result.orFail? or maybe CurrentApplication.defaults
-    |> function
-        | Ok app -> app
-        | Error _ ->
-            let tokenKey = JWTKey.forDevelopment
-            {
-                Instance = Instance.create "mf-edc-default"
-                TokenKey = tokenKey
-                KeysForToken = [
-                    tokenKey
-                ]
-                Debug = Dev
-                ProfilerToken = Profiler.Token "... todo ..."
-                Dependencies = {
-                    MysqlDatabase = MySqlConnectionString (ConnectionString "... todo ...")
-                    AzureSqlDatabase = AzureSqlConnectionString (ConnectionString "... todo ...")
-                }
-            }
-
-// todo - move following to current application
-let envs =
-    Environment.getEnvs()
-    //|> tee (Map.toList >> List.iter (printfn "- %A"))
-let tryGetEnv key =
-    envs |> Map.tryFind key
-
-let publicPath = tryGetEnv "public_path" |> Option.defaultValue "../Client/public" |> Path.GetFullPath
-let storageAccount = tryGetEnv "STORAGE_CONNECTIONSTRING" |> Option.defaultValue "UseDevelopmentStorage=true" |> CloudStorageAccount.Parse
 
 //
 // Api
@@ -59,8 +11,9 @@ let storageAccount = tryGetEnv "STORAGE_CONNECTIONSTRING" |> Option.defaultValue
 module Api =
     open ErrorHandling.AsyncResult.Operators
     open MF.EDC.Query
+    open MF.EDC.Profiler
 
-    let edc logError: IEdcApi =
+    let edc logError currentApplication: IEdcApi =  // todo - logError could be used from currentApplication.Logger
         let inline (>?>) authorize action =
             Authorize.authorizeAction
                 currentApplication.Instance
@@ -125,7 +78,7 @@ module Api =
                 let azureSqlConnection = currentApplication.Dependencies.AzureSqlDatabase |> Database.AzureSql.AzureSql.connect
 
                 let! data =
-                    ItemsQuery.load storageAccount mySqlLocalConnection azureSqlConnection <@> (ItemsError.format >> ErrorMessage)
+                    ItemsQuery.load currentApplication.Dependencies.StorageAccount mySqlLocalConnection azureSqlConnection <@> (ItemsError.format >> ErrorMessage)
 
                 return data |> List.map Dto.Serialize.itemEntity
             }
@@ -157,7 +110,7 @@ module Api =
 
                 let! _ =
                     itemEntity
-                    |> Command.ItemsCommand.create storageAccount mysqlLocalConnection azureSqlConnection  <@> ErrorMessage
+                    |> Command.ItemsCommand.create currentApplication.Dependencies.StorageAccount mysqlLocalConnection azureSqlConnection  <@> ErrorMessage
 
                 return itemEntity.Item |> Dto.Serialize.item
             }
@@ -168,66 +121,77 @@ module Api =
 //
 
 [<RequireQualifiedAccess>]
-module AppInsightTelemetry =
-    let configure (services: IServiceCollection) =
-        tryGetEnv "APPINSIGHTS_INSTRUMENTATIONKEY"
-        |> Option.map services.AddApplicationInsightsTelemetry
-        |> Option.defaultValue services
+module WebApp =
+    open Microsoft.Extensions.DependencyInjection
 
-[<RequireQualifiedAccess>]
-module Logger =
-    open Microsoft.Extensions.Logging
+    open Giraffe
+    open Saturn
 
-    let logMessage (logger: ILogger) (message: string) =
-        logger.LogInformation(sprintf "[Information] %s" message)
-        logger.LogDebug(sprintf "[Debug] %s" message)
-        logger.LogTrace(sprintf "[Trace] %s" message)
-        logger.LogWarning(sprintf "[Warning] %s" message)
-        logger.LogError(sprintf "[Error] %s" message)
-        logger.LogCritical(sprintf "[Critical] %s" message)
+    open Fable.Remoting.Server
+    open Fable.Remoting.Giraffe
 
-        ()
+    [<RequireQualifiedAccess>]
+    module AppInsightTelemetry =
+        let configure currentApplication (services: IServiceCollection) =
+            currentApplication.AppInsightKey
+            |> Option.map (AppInsightKey.value >> services.AddApplicationInsightsTelemetry)
+            |> Option.defaultValue services
 
-    let configure (services: IServiceCollection) =
-        services.AddLogging()
+    [<RequireQualifiedAccess>]
+    module Logger =
+        open Microsoft.Extensions.Logging
 
-let apiRouter =
-    Remoting.createApi()
-    |> Remoting.withRouteBuilder Route.builder
-    |> Remoting.fromContext (fun ctx ->
-        // https://zaid-ajaj.github.io/Fable.Remoting/src/dependency-injection.html
-        let logger = ctx.GetLogger<IEdcApi>()
-        let logError = Logger.logMessage logger
+        let logMessage (logger: ILogger) (message: string) =
+            logger.LogInformation(sprintf "[Information] %s" message)
+            logger.LogDebug(sprintf "[Debug] %s" message)
+            logger.LogTrace(sprintf "[Trace] %s" message)
+            logger.LogWarning(sprintf "[Warning] %s" message)
+            logger.LogError(sprintf "[Error] %s" message)
+            logger.LogCritical(sprintf "[Critical] %s" message)
+            ()
 
-        //let logError = eprintf "Error %s"
+        let configure (services: IServiceCollection) =
+            services.AddLogging()
 
-        Api.edc logError  // todo - create ApplicationLogger
-    )
-    //|> Remoting.fromValue (Api.edc (eprintf "%s"))
-    |> Remoting.buildHttpHandler
+    let run currentApplication =
+        let apiRouter =
+            Remoting.createApi()
+            |> Remoting.withRouteBuilder Route.builder
+            |> Remoting.fromContext (fun ctx ->
+                // https://zaid-ajaj.github.io/Fable.Remoting/src/dependency-injection.html
+                let logger = ctx.GetLogger<IEdcApi>()
+                let logError = Logger.logMessage logger
 
-let appRouter = router {
-    // get "/custom" (warbler (customPage >> text))
+                Api.edc logError currentApplication  // todo - create ApplicationLogger
+            )
+            |> Remoting.buildHttpHandler
 
-    getf "/.well-known/acme-challenge/%s" (fun challenge ->
-        warbler (fun ctx ->
-            "... todo - load from db ..." |> text
-        )
-    )
+        let appRouter = router {
+            // get "/custom" (warbler (customPage >> text))
 
-    forward "/api/" apiRouter
-}
+            (* getf "/.well-known/acme-challenge/%s" (fun challenge ->
+                warbler (fun ctx ->
+                    "... todo - load from db ..." |> text
+                )
+            ) *)
 
-let app = application {
-    url ("http://0.0.0.0:8085/")
-    use_router appRouter
-    memory_cache
-    use_static publicPath
-    service_config (
-        AppInsightTelemetry.configure
-        >> Logger.configure
-    )
-    use_gzip
-}
+            forward "/api/" apiRouter
+        }
 
-run app
+        let app = application {
+            url ("http://0.0.0.0:8085/")
+            use_router appRouter
+            memory_cache
+            use_static (currentApplication.PublicPath |> PublicPath.value)
+            service_config (
+                AppInsightTelemetry.configure currentApplication
+                >> Logger.configure
+            )
+            use_gzip
+        }
+
+        run app
+
+match [ ".env"; ".dist.env" ] |> CurrentApplication.fromEnvironment with
+| Ok app -> WebApp.run app
+| Error error -> failwithf "Application is not running due to error\n%A" error

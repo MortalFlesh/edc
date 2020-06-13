@@ -93,7 +93,7 @@
                         },
                         {
                             "name": "DEBUG",
-                            "value": "dev"
+                            "value": "prod"
                         },
                         {
                             "name": "KEY_VAULT_NAME",

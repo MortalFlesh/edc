@@ -1,6 +1,7 @@
 namespace MF.EDC
 
 open MF.EDC.Profiler
+open Microsoft.Azure.Cosmos.Table
 
 type Debug =
     | Dev
@@ -19,12 +20,15 @@ type CurrentApplication = {
     //Logger: ApplicationLogger
     Debug: Debug
     ProfilerToken: Shared.Profiler.Token
+    AppInsightKey: AppInsightKey option
+    PublicPath: PublicPath
     Dependencies: Dependencies
 }
 
 and Dependencies = {
     MysqlDatabase: MySqlConnectionString
     AzureSqlDatabase: AzureSqlConnectionString
+    StorageAccount: CloudStorageAccount
 }
 
 //
@@ -109,22 +113,20 @@ module CurrentApplication =
                     |> Result.ofOption (InstanceError.InvalidFormatError instanceString)
             }
 
-        let debug environment variableName = result {
-            return
-                environment
-                |> Map.tryFind variableName
-                |> Option.defaultValue "prod"
-                |> Debug.parse
-        }
+        let debug environment variableName =
+            environment
+            |> Map.tryFind variableName
+            |> Option.defaultValue "prod"
+            |> Debug.parse
 
         [<RequireQualifiedAccess>]
         module KeyVault =
             open Azure.Identity
             open Azure.Security.KeyVault.Secrets
 
-            let secret environment secret = asyncResult {
+            let secret environment keyVaultEnvVar secret = asyncResult {
                 let! keyVaultName =
-                    "KEY_VAULT_NAME"
+                    keyVaultEnvVar
                     |> getEnvironmentValue environment id KeyVaultError.VariableNotFoundError
                     |> AsyncResult.ofResult
 
@@ -133,16 +135,23 @@ module CurrentApplication =
 
                 let! secretResult =
                     client.GetSecretAsync(secret)
-                    |> Async.AwaitTask
-                    |> Async.Catch
-                    |> Async.map (Result.ofChoice >@> KeyVaultError.GetSecretError)
+                    |> AsyncResult.ofTaskCatch KeyVaultError.GetSecretError
 
                 return secretResult.Value.Value
             }
 
+        let storageAccount environment =
+            let tryParse connectionString =
+                match CloudStorageAccount.TryParse connectionString with
+                | true, cloudStorage -> Some cloudStorage
+                | _ -> None
+
+            getEnvironmentValue environment tryParse (sprintf "Environment variable %A for Cloud storage account is not set.")
+            >=> Result.ofOption "Cloud storage account could not be parsed. Connection string is either empty, or in wrong format."
+
         [<RequireQualifiedAccess>]
         module Database =
-            let azureSqlConnectionString environment (connectionStringVarName, adminPassEnvVar, adminPassSecret) = asyncResult {
+            let azureSqlConnectionString environment kvSecret (connectionStringVarName, adminPassEnvVar, adminPassSecret) = asyncResult {
                 let! (ConnectionString connectionString) =
                     connectionStringVarName
                     |> getEnvironmentValue environment ConnectionString ConnectionStringError.ConnectionStringMissing
@@ -154,7 +163,7 @@ module CurrentApplication =
                         AsyncResult.ofSuccess predefinedPassword
                     | _ ->
                         adminPassSecret
-                        |> KeyVault.secret environment
+                        |> kvSecret
                         |> AsyncResult.map DatabasePassword
                         |> AsyncResult.mapError (KeyVaultError.format >> ConnectionStringError.MissingPassword)
 
@@ -164,7 +173,7 @@ module CurrentApplication =
             let mysqlLocalConnectionString environment =
                 getEnvironmentValue environment (ConnectionString >> MySqlConnectionString) ConnectionStringError.MissingPassword
 
-        let profilerToken environment (envVar, kvKey) = result {
+        let profilerToken environment kvSecret (envVar, kvKey) = result {
             let token =
                 envVar
                 |> getEnvironmentValue environment Shared.Profiler.Token ignore
@@ -174,36 +183,44 @@ module CurrentApplication =
                 | Ok token -> Ok token
                 | _ ->
                     kvKey
-                    |> KeyVault.secret environment
+                    |> kvSecret
                     |> AsyncResult.map Shared.Profiler.Token
                     |> AsyncResult.mapError KeyVaultError.format
                     |> Async.RunSynchronously
         }
 
+        let publicPath environment =
+            getEnvironmentValue environment PublicPath ignore
+            >-> fun () -> Ok (PublicPath "../Client/public")
+
+        let appInsightKey environment =
+            getEnvironmentValue environment AppInsightKey ignore
+            >> Result.toOption
+
     let fromEnvironment files =
         result {
             let! environment = files |> Environment.load
+            let kvSecret = "KEY_VAULT_NAME" |> Environment.KeyVault.secret environment
 
             let! instance = "INSTANCE" |> Environment.instance environment <@> InstanceError.format
-            let! debug = "DEBUG" |> Environment.debug environment
+            let debug = "DEBUG" |> Environment.debug environment
 
             let tokenKey =
                 match debug with
                 | Dev -> JWTKey.forDevelopment
                 | Prod -> JWTKey.generate()
 
-            let! mysqlConnectionString =
-                "MYSQLCONNSTR_localdb"
-                |> Environment.Database.mysqlLocalConnectionString environment <@> ConnectionStringError.format
+            let! storageAccount = "STORAGE_CONNECTIONSTRING" |> Environment.storageAccount environment
+            let! mysqlConnectionString = "MYSQLCONNSTR_localdb" |> Environment.Database.mysqlLocalConnectionString environment <@> ConnectionStringError.format
 
             let! azureSqlConnectionString =
                 ("SQLAZURECONNSTR_mf-edc-db", "ADMIN_DB_PASS", "mf-edc-admin-pass")
-                |> Environment.Database.azureSqlConnectionString environment
+                |> Environment.Database.azureSqlConnectionString environment kvSecret
                 |> Async.RunSynchronously <@> ConnectionStringError.format
 
-            let! profilerToken =
-                ("PROFILER_TOKEN", "profiler-token")
-                |> Environment.profilerToken environment
+            let! profilerToken = ("PROFILER_TOKEN", "profiler-token") |> Environment.profilerToken environment kvSecret
+            let! publicPath = "public_path" |> Environment.publicPath environment
+            let appInsightKey = "APPINSIGHTS_INSTRUMENTATIONKEY" |> Environment.appInsightKey environment
 
             return {
                 Instance = instance
@@ -214,9 +231,12 @@ module CurrentApplication =
                 //Logger = logger
                 Debug = debug
                 ProfilerToken = profilerToken
+                PublicPath = publicPath
+                AppInsightKey = appInsightKey
                 Dependencies = {
                     MysqlDatabase = mysqlConnectionString
                     AzureSqlDatabase = azureSqlConnectionString
+                    StorageAccount = storageAccount
                 }
             }
         }
