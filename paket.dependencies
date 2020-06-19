@@ -4,7 +4,7 @@ group Server
     storage: none
 
     nuget FSharp.Core
-    nuget Saturn 0.13.1
+    nuget Saturn
     nuget JsonWebToken ~> 1.3
     nuget Fable.Remoting.Giraffe ~> 3
     nuget Microsoft.ApplicationInsights.AspNetCore

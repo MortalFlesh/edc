@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# include functions
+if [ -e ./bin/functions.sh ]; then
+    . ./bin/functions.sh
+fi
+
+logSelenium "Stoping docker..."
+docker-compose -f ./bin/selenium-docker.yml stop
+docker-compose -f ./bin/selenium-docker.yml rm -f
+logSelenium "Docker stopped."
