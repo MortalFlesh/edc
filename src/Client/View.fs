@@ -19,7 +19,7 @@ let private isSelected = function
     | _ -> false
 
 let private navBrand routing { CurrentPage = page; CurrentUser = user } =
-    Navbar.navbar [ Navbar.Color IsWhite ] [
+    Navbar.navbar [ Navbar.Color IsPrimary ] [
         Container.container [] [
             Navbar.Brand.div [] [
                 Navbar.Item.a [ Navbar.Item.CustomClass "brand-text" ] [ str "EDC" ]
@@ -109,21 +109,23 @@ let private globalMessages model =
 let view (model: Model) (dispatch: Dispatch) =
     let routing = Routing.routing (PageAction >> dispatch)
 
-    div [] [
-        navBrand routing model
+    Columns.columns [] [
+        Column.column [ Column.Width (Screen.All, Column.Is12) ] [
+            navBrand routing model
 
-        Container.container [] [
-            globalMessages model
+            Container.container [] [
+                globalMessages model
 
-            match model.CurrentPage with
-            | Login -> PageLogin.page model.PageLogin (PageLoginAction >> dispatch)
-            | AnonymousEdcSets _ -> PageEdcSets.page model.PageAnonymousEdcModel (PageAnonymousEdcAction >> dispatch)
-            | MyEdcSets _ -> PageEdcSets.page model.PageMyEdcModel (PageMyEdcAction >> dispatch)
-            | Items _ -> PageItems.page routing model.PageItemsModel (PageItemsAction >> dispatch)
-            | AddItem _ -> PageAddItem.page model.PageAddItemModel (PageAddItemAction >> dispatch)
+                match model.CurrentPage with
+                | Login -> PageLogin.page model.PageLogin (PageLoginAction >> dispatch)
+                | AnonymousEdcSets _ -> PageEdcSets.page model.PageAnonymousEdcModel (PageAnonymousEdcAction >> dispatch)
+                | MyEdcSets _ -> PageEdcSets.page model.PageMyEdcModel (PageMyEdcAction >> dispatch)
+                | Items _ -> PageItems.page routing model.PageItemsModel (PageItemsAction >> dispatch)
+                | AddItem _ -> PageAddItem.page model.PageAddItemModel (PageAddItemAction >> dispatch)
+            ]
+
+            Profiler.profiler (fun () -> refreshProfiler dispatch) model.Profiler (ProfilerAction >> dispatch)
         ]
-
-        Profiler.profiler (fun () -> refreshProfiler dispatch) model.Profiler (ProfilerAction >> dispatch)
     ]
 
 open Elmish.UrlParser
