@@ -34,62 +34,61 @@ let page (model: PageAddItemModel) (dispatch: DispatchPageAddItemAction) =
             (field |> Field.title)
             (field |> fieldErrors)
 
-    div [] [
-        Component.subTitle "Add Item"
+    Columns.columns [] [
+        Column.column [ Column.Width (Screen.All, Column.Is12) ] [
+            Component.subTitle "Add Item"
+        ]
+        Column.column [ Column.Width (Screen.All, Column.Is12) ] [
+            Columns.columns [ Columns.IsMultiline ] [
+                Column.column [ Column.Width (Screen.All, Column.Is6) ] [
+                    // todo show global Form errors (Field.Form)
 
-        Columns.columns [] [
-            Column.column [ Column.Width (Screen.All, Column.Is12) ] [
-                Columns.columns [ Columns.IsMultiline ] [
-                    Column.column [ Column.Width (Screen.All, Column.Is6) ] [
-                        // todo show global Form errors (Field.Form)
+                    // todo - add selector for Type and SubType
 
-                        // todo - add selector for Type and SubType
+                    Component.subTitle "Common"
 
-                        Component.subTitle "Common"
+                    itemModel.Name
+                    |> inputField Input.text Name
 
-                        itemModel.Name
-                        |> inputField Input.text Name
+                    itemModel.Note
+                    // todo - make i text area or wysiwyg
+                    |> Option.defaultValue ""
+                    |> inputField Input.text Note
 
-                        itemModel.Note
-                        // todo - make i text area or wysiwyg
-                        |> Option.defaultValue ""
-                        |> inputField Input.text Note
+                    model.TagsModel
+                    |> Tag.inputField
+                        "AddItem"
+                        onSubmit
+                        (not isSubmitting)
+                        "Tags"
+                        (PageAddItemAction.TagsInputAction >> dispatch)
 
-                        model.TagsModel
-                        |> Tag.inputField
-                            "AddItem"
-                            onSubmit
-                            (not isSubmitting)
-                            "Tags"
-                            (PageAddItemAction.TagsInputAction >> dispatch)
+                    itemModel.Color
+                    |> Option.defaultValue ""
+                    |> inputField Input.text Field.Color
 
-                        itemModel.Color
-                        |> Option.defaultValue ""
-                        |> inputField Input.text Field.Color
+                    (* itemModel.Links
+                    |> Option.defaultValue ""
+                    |> inputField Input.text Links *)
 
-                        (* itemModel.Links
-                        |> Option.defaultValue ""
-                        |> inputField Input.text Links *)
-
-                        itemModel.OwnershipStatus   // todo - select box
-                        |> Option.defaultValue ""
-                        |> inputField Input.text OwnershipStatus
-                    ]
-
-                    Column.column [ Column.Width (Screen.All, Column.Is6) ] [
-                        Component.subTitle "Product"
-
-                        model.NewProduct |> Product.form onSubmit isSubmitting (PageAddItemAction.ProductAction >> dispatch)
-                    ]
+                    itemModel.OwnershipStatus   // todo - select box
+                    |> Option.defaultValue ""
+                    |> inputField Input.text OwnershipStatus
                 ]
 
-                Columns.columns [ Columns.IsMultiline ] [
-                    Column.column [ Column.Width (Screen.All, Column.Is6) ] [
+                Column.column [ Column.Width (Screen.All, Column.Is6) ] [
+                    Component.subTitle "Product"
 
-                        ("Save", "Saving")
-                        |> Component.submit onSubmit model.SavingStatus
+                    model.NewProduct |> Product.form onSubmit isSubmitting (PageAddItemAction.ProductAction >> dispatch)
+                ]
+            ]
 
-                    ]
+            Columns.columns [ Columns.IsMultiline ] [
+                Column.column [ Column.Width (Screen.All, Column.Is6) ] [
+
+                    ("Save", "Saving")
+                    |> Component.submit onSubmit model.SavingStatus
+
                 ]
             ]
         ]

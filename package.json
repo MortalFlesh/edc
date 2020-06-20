@@ -9,6 +9,9 @@
         "@fortawesome/fontawesome-free": "^5.13.1",
         "babel-loader": "^8.1.0",
         "bulma": "^0.8.2",
+        "bulma-quickview": "^2.0.0",
+        "bulma-tooltip": "^3.0.2",
+        "bulmaswatch": "^0.8.1",
         "copy-webpack-plugin": "^5.1.1",
         "core-js": "^3.6.5",
         "css-loader": "^2.0.1",
@@ -30,9 +33,5 @@
         "webpack-cli": "^3.3.12",
         "webpack-dev-server": "^3.11.0",
         "whatwg-fetch": "^3.0.0"
-    },
-    "dependencies": {
-        "bulma-quickview": "^2.0.0",
-        "bulma-tooltip": "^3.0.2"
     }
 }
