@@ -25,6 +25,10 @@ var CONFIG = {
     // to a external API server. See https://webpack.js.org/configuration/dev-server/#devserver-proxy
     devServerProxy: {
         // redirect requests that start with /api/ to the server on port 8085
+        '/.well-known/acme-challenge/': {
+            target: 'http://127.0.0.1:' + (process.env.SERVER_PROXY_PORT || "8085"),
+               changeOrigin: true
+           },
         '/api/**': {
             target: 'http://127.0.0.1:' + (process.env.SERVER_PROXY_PORT || "8085"),
                changeOrigin: true

@@ -10,8 +10,6 @@ module Profiler =
 
     open Shared
 
-    let token = Profiler.Token "...todo - read on startup..."
-
     let private queryItem color query: Profiler.DetailItem =
         let { Target = (Target (method, Url target)); Created = created } = query.Target
 
@@ -46,7 +44,7 @@ module Profiler =
             Link = None
         }
 
-    let init currentApplication debug =
+    let init currentApplication (environment: Map<string, string>) debug =
         let errorsCount = Errors.count()
 
         Profiler.Toolbar [
@@ -77,6 +75,21 @@ module Profiler =
                     Profiler.Detail.createItem (Profiler.Label "Git Branch") (Profiler.Value AssemblyVersionInformation.AssemblyMetadata_gitbranch)
                     Profiler.Detail.createItem (Profiler.Label "Git Commit") (Profiler.Value AssemblyVersionInformation.AssemblyMetadata_gitcommit)
                 ]
+            }
+
+            yield {
+                Id = Profiler.Id "Environment"
+                Label = Some (Profiler.Label "Environment")
+                Value = Profiler.Value (environment.Count |> sprintf "%A")
+                Unit = None
+                ItemColor = None
+                StatusIcon = None
+                Detail =
+                    environment
+                    |> Map.toList
+                    |> List.map (fun (key, value) ->
+                        Profiler.Detail.createItem (Profiler.Label key) (Profiler.Value value)
+                    )
             }
 
             yield {

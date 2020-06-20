@@ -1,0 +1,18 @@
+{
+    "name": "tools/coding-standards",
+    "require-dev": {
+        "lmc/coding-standard": "^2.0"
+    },
+    "authors": [
+        {
+            "name": "Petr Chromec",
+            "email": "mortal_flesh@seznam.cz"
+        }
+    ],
+    "scripts": {
+        "link": "cd ../../vendor/bin/ && ln -sf ../../tools/coding-standards/vendor/bin/ecs ecs"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

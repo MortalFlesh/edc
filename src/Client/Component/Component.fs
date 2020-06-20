@@ -102,7 +102,7 @@ module Modal =
 
 type private Input = Input.Option list -> ReactElement
 
-let inputField onSubmit isEnabled (input: Input) onChange title error value =
+let inputField formName onSubmit isEnabled (input: Input) onChange title errors value =
     Field.div [] [
         Field.div [ Field.HasAddons ] [
             Control.p [] [
@@ -117,13 +117,51 @@ let inputField onSubmit isEnabled (input: Input) onChange title error value =
                     ]
                     Input.Placeholder title
                     Input.Value value
+                    Input.Id (sprintf "%s-%s" formName title)
 
-                    if error |> Option.isSome then Input.Color IsDanger
+                    if errors |> List.isEmpty |> not then Input.Color IsDanger
                 ]
 
-                match error with
-                | Some (ErrorMessage error) -> Help.help [ Help.Color IsDanger ] [ str error ]
-                | _ -> ()
+                errors
+                |> List.map (fun (ErrorMessage error) -> Help.help [ Help.Color IsDanger ] [ str error ])
+                |> div []
             ]
+        ]
+    ]
+
+let submit onSubmit status (title, titleSubmitting)  =
+    Button.button [
+        Button.Disabled (status = InProgress)
+        Button.Color IsPrimary
+        Button.OnClick (fun _ -> onSubmit())
+    ] [
+        match status with
+        | InProgress ->
+            Icon.asyncStatus status
+            span [] [ str " " ]
+            str (sprintf "%s ..." titleSubmitting)
+        | _ ->
+            str title
+    ]
+
+let table headers row items =
+    Table.table [
+        Table.IsBordered
+        Table.IsFullWidth
+        Table.IsStriped
+        Table.IsHoverable
+    ] [
+        thead [] [
+            tr [] [
+                yield! headers |> List.map (fun header -> th [] [ str header ])
+            ]
+        ]
+
+        tbody [] [
+            yield! items |> List.map (row >> fun cols ->
+                tr [] [
+                    yield! cols |> List.map (fun col -> td [] [ col ])
+                ]
+            )
         ]
     ]

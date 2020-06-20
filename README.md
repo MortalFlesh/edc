@@ -3,10 +3,18 @@ EDC Configurator
 
 > Web gui for create/manage EDC sets
 
+## Maintenance and self-notes
+
+### SSL cert
+> https://medium.com/@marcmathijssen/add-ssl-to-azure-web-app-using-letsencrypt-9125c3fdfb03
+- `sudo certbot certonly --preferred-challenges http -d myedc.cz --manual`
+- To success the acme challenge, use an in-app route and pass a value to db (*todo*)
+- `sudo openssl pkcs12 -export -out ./myedc.pfx -inkey /etc/letsencrypt/live/myedc.cz/privkey.pem -in /etc/letsencrypt/live/myedc.cz/cert.pem`
+
 ---
 ## SAFE Template
 
-> Created by `dotnet new SAFE --layout fulma-admin --communication remoting --deploy docker --js-deps npm`
+> Created by `dotnet new SAFE --layout fulma-admin --communication remoting --deploy azure --js-deps npm` (_originally with `--deploy docker`_)
 
 This template can be used to generate a full-stack web application using the [SAFE Stack](https://safe-stack.github.io/). It was created using the dotnet [SAFE Template](https://safe-stack.github.io/docs/template-overview/). If you want to learn more about the template why not start with the [quick start](https://safe-stack.github.io/docs/quickstart/) guide?
 
@@ -37,6 +45,7 @@ dotnet fake build -t run
 
 You can use the included `Dockerfile` and `build.fsx` script to deploy your application as Docker container. You can find more regarding this topic in the [official template documentation](https://safe-stack.github.io/docs/template-docker/).
 
+You can use the included `arm-template.json` file and `build.fsx` script to deploy you application as an Azure Web App. Consult the [official template documentation](https://safe-stack.github.io/docs/template-appservice/) to learn more.
 
 ### SAFE Stack Documentation
 

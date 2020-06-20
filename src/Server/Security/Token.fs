@@ -43,8 +43,12 @@ module JwtKeyModule =
 
     [<RequireQualifiedAccess>]
     module JWTKey =
+        open System
+
+        let forDevelopment = JWTKey ("97a5a8b4-dea4-4b46-bd11-5b003bf304b0" |> Guid.Parse)
+
         let generate () =
-            System.Guid.NewGuid()
+            Guid.NewGuid()
             |> JWTKey
 
         let value = function
@@ -55,6 +59,10 @@ type PermissionGroup = PermissionGroup of string
 [<RequireQualifiedAccess>]
 module PermissionGroup =
     let value (PermissionGroup group) = group
+
+[<RequireQualifiedAccess>]
+module Username =
+    let value (Username username) = username
 
 type Permission =
     | ValidToken
@@ -69,7 +77,7 @@ module JWTToken =
     type private GrantedToken = GrantedToken of Jwt
 
     type private UserData = {
-        Username: string
+        Username: Username
         DisplayName: string
         Groups: PermissionGroup list
         GrantedToken: GrantedToken
@@ -119,7 +127,7 @@ module JWTToken =
                         | _ -> Error MissingGroups
 
                     return GrantedTokenData {
-                        Username = username
+                        Username = Username username
                         DisplayName = displayName
                         Groups = groups
                         GrantedToken = GrantedToken jwtResult.Token
@@ -216,7 +224,7 @@ module JWTToken =
 
         let (GrantedToken token) = userData.GrantedToken
         let customData = [
-            CustomItem.String (UserCustomData.Username, userData.Username)
+            CustomItem.String (UserCustomData.Username, userData.Username |> Username.value)
             CustomItem.String (UserCustomData.DisplayName, userData.DisplayName)
             CustomItem.Strings (UserCustomData.Groups, userData.Groups |> List.map PermissionGroup.value)
         ]
@@ -233,3 +241,12 @@ module JWTToken =
         |> addCustomData customData
         |> JwtWriter().WriteTokenString
         |> JWTToken
+
+    let userData currentApp key (RenewedToken token): Result<User, _> = result {
+        let! (GrantedTokenData user) = token |> readUserData currentApp key
+
+        return {
+            Username = user.Username
+            Token = token
+        }
+    }

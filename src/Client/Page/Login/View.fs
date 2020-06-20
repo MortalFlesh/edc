@@ -16,7 +16,7 @@ open PageLoginModule
 let page (model: PageLoginModel) (dispatch: DispatchPageLoginAction) =
     let isLogging = model.LoginStatus = InProgress
     let onSubmit = if isLogging then ignore else (fun _ -> dispatch Login)
-    let inputField = Component.inputField onSubmit (not isLogging)
+    let inputField = Component.inputField "Login" onSubmit (not isLogging)
 
     fragment [] [
         Columns.columns [] [
@@ -25,21 +25,19 @@ let page (model: PageLoginModel) (dispatch: DispatchPageLoginAction) =
                     Column.column [ Column.Width (Screen.All, Column.Is5) ] [
                         model.Username
                         |> Username.value
-                        |> inputField
-                            Input.text
+                        |> inputField Input.text
                             (Username >> PageLoginAction.ChangeUsername >> dispatch)
                             "Username"
-                            model.UsernameError
+                            (model.UsernameError |> Option.toList)
                     ]
 
                     Column.column [ Column.Width (Screen.All, Column.Is5) ] [
                         model.Password
                         |> Password.value
-                        |> inputField
-                            Input.password
+                        |> inputField Input.password
                             (Password >> PageLoginAction.ChangePassword >> dispatch)
                             "Password"
-                            model.PasswordError
+                            (model.PasswordError |> Option.toList)
                     ]
 
                     Column.column [ Column.Width (Screen.All, Column.Is1); Column.Offset (Screen.All, Column.Is1) ] [

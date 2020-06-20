@@ -44,22 +44,228 @@ module JWTToken =
 
 [<RequireQualifiedAccess>]
 module Dto =
+    open System
+
     module Login =
         type User = {
             Username: Username
             Token: JWTToken
         }
 
-    module Edc =
-        type EdcSet = EdcSet of string
+    module Common =
+        //
+        // Size
+        //
+
+        [<Measure>] type Gram
+        [<Measure>] type Milimeter
+
+        type Weight = Weight of int<Gram>
 
         [<RequireQualifiedAccess>]
-        module EdcSet =
+        module Weight =
+            let ofGrams grams = Weight (grams * 1<Gram>)
+            let value (Weight w) = w |> int
+
+        type Dimensions = {
+            Height: int<Milimeter>
+            Width: int<Milimeter>
+            Length: int<Milimeter>
+        }
+
+        [<RequireQualifiedAccess>]
+        module Dimensions =
+            let ofMilimeter (size: int) = size * 1<Milimeter>
+
+        //
+        // Product
+        //
+
+        type Price = {
+            Amount: float
+            Currency: string
+        }
+
+        type Ean = Ean of string
+
+        [<RequireQualifiedAccess>]
+        module Ean =
+            let value (Ean ean) = ean
+
+        type Link = Link of string
+
+        type ProductInfo = {
+            Id: string
+            Name: string
+            Manufacturer: string
+            Price: Price
+            Ean: Ean option
+            Links: Link list
+        }
+
+        //
+        // Gallery
+        //
+
+        type Gallery = {
+            Images: Link list
+        }
+
+        //
+        // Common
+        //
+
+        type Id = Id of string
+
+        [<RequireQualifiedAccess>]
+        module Id =
             let parse = function
                 | null | "" -> None
-                | set -> Some (EdcSet set)
+                | id -> Some (Id id)
 
-            let value (EdcSet set) = set
+            let value (Id id) = id
+
+        type OwnershipStatus =
+            | Own
+            | Wish
+            | Maybe
+            | Idea
+            | ToBuy
+            | ToSell
+            | Ordered
+
+        [<RequireQualifiedAccess>]
+        module OwnershipStatus =
+            let parse = function
+                | "Own" -> Some Own
+                | "Wish" -> Some Wish
+                | "Maybe" -> Some Maybe
+                | "Idea" -> Some Idea
+                | "ToBuy" -> Some ToBuy
+                | "ToSell" -> Some ToSell
+                | "Ordered" -> Some Ordered
+                | _ -> None
+
+        type Color = Color of string
+
+        type Slug = Slug of string
+        type TagName = TagName of string
+
+        type WrongTag = WrongTag of string // todo - move to model, where there will be one
+
+        type Tag = {
+            Slug: Slug
+            Name: TagName
+        }
+
+        [<RequireQualifiedAccess>]
+        module Tag =
+            let value ({ Name = (TagName tag )}: Tag) = tag
+
+        type CommonInfo = {
+            Name: string
+            Note: string option
+            Color: Color option
+            Tags: Tag list
+            Links: Link list
+            Price: Price option
+            Weight: Weight option
+            Dimensions: Dimensions option
+            OwnershipStatus: OwnershipStatus
+            Product: ProductInfo option
+            Gallery: Gallery option
+        }
+
+    module Items =
+        open Common
+
+        //
+        // Tools
+        //
+
+        type ToolInfo = {
+            Common: CommonInfo
+        }
+
+        type Tool =
+            | MultiTool of ToolInfo
+            | Knife of ToolInfo
+            | Gun of ToolInfo
+            | OtherTool of ToolInfo
+
+        //
+        // Consumables
+        //
+
+        type ConsumableInfo = {
+            Common: CommonInfo
+        }
+
+        type Consumable =
+            | Food of ConsumableInfo
+            | OtherConsumable of ConsumableInfo
+
+        //
+        // Items
+        //
+
+        [<RequireQualifiedAccess>]
+        type Item =
+            | Tool of Tool
+            | Container of Container
+            | Consumable of Consumable
+
+        //
+        // Containers
+        //
+
+        and Container =
+            | BagPack of ContainerInfo
+            | Organizer of ContainerInfo
+            | Pocket of ContainerInfo
+            | Panel of ContainerInfo
+            | OtherContainer of ContainerInfo
+
+        and ContainerInfo = {
+            Common: CommonInfo
+
+            Items: ItemInContainer list
+            TotalWeight: Weight
+        }
+
+        and ItemInContainer = {
+            Item: ItemEntity
+            Quantity: int
+        }
+
+        //
+        // Entities
+        //
+
+        and ItemEntity = {
+            Id: Id
+            Item: Item
+        }
+
+        type ContainerEntity = {
+            Id: Id
+            Container: Container
+        }
+
+        [<RequireQualifiedAccess>]
+        module ItemEntity =
+            let item: ItemEntity -> Item = fun { Item = item } -> item
+
+    module Edc =
+        open Common
+        open Items
+
+        type EDCSet = {
+            Id: Id
+            Name: string option
+            Description: string option
+            Inventory: ContainerEntity list
+        }
 
 //
 // Routing, etc.
@@ -139,6 +345,9 @@ module Profiler =
 //
 
 open Dto.Login
+open Dto.Common
+open Dto.Items
+open Dto.Edc
 
 type AsyncResult<'Success, 'Error> = Async<Result<'Success, 'Error>>
 
@@ -172,4 +381,8 @@ type IEdcApi = {
 
         LoadData: SecureRequest<RequestData> -> SecuredAsyncResult<SecuredData, ErrorMessage>
     *)
+    ValidateTag: SecureRequest<string> -> SecuredAsyncResult<Tag, ErrorMessage>
+
+    LoadItems: SecureRequest<unit> -> SecuredAsyncResult<ItemEntity list, ErrorMessage>
+    CreateItem: SecureRequest<Item> -> SecuredAsyncResult<Item, ErrorMessage>
 }

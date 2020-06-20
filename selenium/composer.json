@@ -1,0 +1,48 @@
+{
+    "name": "mf/edc-tests",
+    "description": "",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Petr Chromec",
+            "email": "mortal_flesh@seznam.cz"
+        }
+    ],
+    "prefer-stable": true,
+    "require": {
+        "php": "^7.1",
+        "ext-ctype": "*",
+        "ext-iconv": "*",
+        "fzaninotto/faker": "^1.9",
+        "lmc/steward": "dev-master",
+        "mf/collections-php": "^4.0"
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "@installTools"
+        ],
+        "post-update-cmd": [
+            "@installTools"
+        ],
+        "installTools": [
+            "cd tools/coding-standards && composer install && composer link"
+        ],
+        "analyze": [
+            "vendor/bin/ecs check tests/ --ansi --clear-cache"
+        ],
+        "fix": [
+            "vendor/bin/ecs check tests/ --ansi --clear-cache --fix"
+        ],
+        "all": [
+            "@analyze"
+        ]
+    },
+    "autoload": {
+        "psr-4": {
+            "MF\\Edc\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

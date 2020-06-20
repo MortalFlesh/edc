@@ -3,3 +3,10 @@ group Server
     Saturn
     Fable.Remoting.Giraffe
     JsonWebToken
+    Microsoft.ApplicationInsights.AspNetCore
+    Microsoft.Extensions.Logging.ApplicationInsights
+    Microsoft.Azure.Cosmos.Table
+    Dapper.FSharp
+    Azure.Security.KeyVault.Secrets
+    Azure.Identity
+    Slugify.Core

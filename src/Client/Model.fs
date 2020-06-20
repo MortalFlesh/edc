@@ -7,43 +7,141 @@ open Elmish.Navigation
 open Thoth.Json
 
 open PageLoginModule
-open PageMyEdcModule
+open PageEdcModule
+open PageItemsModule
+open PageAddItemModule
 
 open Shared
 open ProfilerModel
 open Shared.Dto.Login
+open Shared.Dto.Common
+open Shared.Dto.Items
 open Shared.Dto.Edc
 
 type Page =
+    // Public
     | Login
-    | MyEdcSets of EdcSet option
+    | AnonymousEdcSets of Id option
+
+    // Secured
+    | MyEdcSets of Id option
+    | Items of Id option
+    | AddItem
 
 [<RequireQualifiedAccess>]
 module Page =
-    let all = function
-        | MyEdcSets (Some set) ->
-            [
-                MyEdcSets (Some set)
-            ]
-        | _ ->
-            [
-                MyEdcSets None
-            ]
+    [<RequireQualifiedAccess>]
+    type private Pages =
+        | Login
+        | AnonymousEdcSets
+        | MyEdcSets
+        | Items
+        | AddItem
 
-    let toPath =
-        function
-        | Login -> "login"
-        | MyEdcSets (Some set) -> sprintf "my-sets/%s" (set|> EdcSet.value)
-        | MyEdcSets None -> "my-sets"
-        >> (+) "#/"
+    [<RequireQualifiedAccess>]
+    module private Pages =
+        let ofPage = function
+            | Login -> Pages.Login, None
+            | AnonymousEdcSets id -> Pages.AnonymousEdcSets, id
+            | MyEdcSets id -> Pages.MyEdcSets, id
+            | Items id -> Pages.Items, id
+            | AddItem -> Pages.AddItem, None
+
+    type private PageDefinition = {
+        Path: string
+        DetailPath: (string -> string) option
+        Page: Page
+        Parsers: Parser<Page -> Page, Page> list
+    }
+
+    [<RequireQualifiedAccess>]
+    module private PageDefinition =
+        let page { Page = page } = page
+        let parsers { Parsers = parsers } = parsers
+
+    [<RequireQualifiedAccess>]
+    module private PagesDefinitions =
+        let pages definitions =
+            definitions
+            |> List.map (snd >> PageDefinition.page)
+
+    let private pagesDefinitions = [
+        Pages.Login => {
+            Path = "login"
+            DetailPath = None
+            Page = Login
+            Parsers = [
+                map Login (s "login")
+            ]
+        }
+        Pages.AnonymousEdcSets => {
+            Path = "sets"
+            DetailPath = Some (sprintf "sets/%s")
+            Page = AnonymousEdcSets None
+            Parsers = [
+                map (Id.parse >> AnonymousEdcSets) (s "sets" </> str)
+                map (AnonymousEdcSets None) (s "sets")
+            ]
+        }
+        Pages.MyEdcSets => {
+            Path = "my-sets"
+            DetailPath = Some (sprintf "my-sets/%s")
+            Page = MyEdcSets None
+            Parsers = [
+                map (Id.parse >> MyEdcSets) (s "my-sets" </> str)
+                map (MyEdcSets None) (s "my-sets")
+            ]
+        }
+        Pages.Items => {
+            Path = "items"
+            DetailPath = Some (sprintf "items/%s")
+            Page = Items None
+            Parsers = [
+                map (Id.parse >> Items) (s "items" </> str)
+                map (Items None) (s "items")
+            ]
+        }
+        Pages.AddItem => {
+            Path = "add-item"
+            DetailPath = None
+            Page = AddItem
+            Parsers = [
+                map AddItem (s "add-item")
+            ]
+        }
+    ]
+
+    let private pagesMap = Map.ofList pagesDefinitions
+
+    let private withDetail detail page =
+        pagesMap
+        |> Map.add page { pagesMap.[page] with Page = detail }
+        |> Map.toList
+        |> List.map (snd >> PageDefinition.page)
+
+    let all = function
+        // Details
+        | AnonymousEdcSets (Some _) as detail -> Pages.AnonymousEdcSets |> withDetail detail
+        | MyEdcSets (Some _) as detail -> Pages.MyEdcSets |> withDetail detail
+        | Items (Some _) as detail -> Pages.Items |> withDetail detail
+
+        // List, Indexes, ...
+        | Login
+        | AnonymousEdcSets None
+        | MyEdcSets None
+        | Items None
+        | AddItem -> pagesDefinitions |> PagesDefinitions.pages
+
+    let toPath page =
+        let p, detail = Pages.ofPage page
+
+        match detail, pagesMap.[p] with
+        | Some id, { DetailPath = Some detail } -> detail (id |> Id.value)
+        | _, definition -> definition.Path
+        |> sprintf "#/%s"
 
     let parse: Parser<Page -> Page, Page> =
-        oneOf [
-            map Login (s "login")
-
-            map (EdcSet.parse >> MyEdcSets) (s "my-sets" </> str)
-            map (MyEdcSets None) (s "my-sets")
-        ]
+        oneOf (pagesDefinitions |> List.collect (snd >> PageDefinition.parsers))
 
 /// The model holds data that you want to keep track of while the application is running
 type Model = {
@@ -56,7 +154,10 @@ type Model = {
     Profiler: ProfilerModel
 
     PageLogin: PageLoginModel
-    PageMyEdcModel: PageMyEdcModel
+    PageAnonymousEdcModel: PageEdcModel
+    PageMyEdcModel: PageEdcModel
+    PageItemsModel: PageItemsModel
+    PageAddItemModel: PageAddItemModel
 }
 
 [<RequireQualifiedAccess>]
@@ -73,7 +174,10 @@ module Model =
 type PageAction =
     | GoToLogin
     | Logout
+    | GoToAnonymousEdcSets
     | GoToMyEdcSets
+    | GoToItems
+    | GoToAddItem
 
 /// The Action type defines what events/actions can occur while the application is running
 /// the state of the application changes *only* in reaction to these events
@@ -91,7 +195,10 @@ type Action =
 
     | PageAction of PageAction
     | PageLoginAction of PageLoginAction
-    | PageMyEdcAction of PageMyEdcAction
+    | PageAnonymousEdcAction of PageEdcAction
+    | PageMyEdcAction of PageEdcAction
+    | PageItemsAction of PageItemsAction
+    | PageAddItemAction of PageAddItemAction
 
 type Dispatch = Action -> unit
 
@@ -105,12 +212,18 @@ let initialModel = {
     Profiler = ProfilerModel.empty
 
     PageLogin = PageLoginModel.empty
-    PageMyEdcModel = PageMyEdcModel.empty
+    PageAnonymousEdcModel = PageEdcModel.empty
+    PageMyEdcModel = PageEdcModel.empty
+    PageItemsModel = PageItemsModel.empty
+    PageAddItemModel = PageAddItemModel.empty
 }
 
 let pageInitAction = function
     | Login -> Cmd.ofMsg (PageLoginAction.InitPage |> PageLoginAction)
-    | MyEdcSets set -> Cmd.ofMsg (PageMyEdcAction.InitPage set |> PageMyEdcAction)
+    | AnonymousEdcSets set -> Cmd.ofMsg (PageEdcAction.InitPage set |> PageMyEdcAction)
+    | MyEdcSets set -> Cmd.ofMsg (PageEdcAction.InitPage set |> PageMyEdcAction)
+    | Items item -> Cmd.ofMsg (PageItemsAction.InitPage item |> PageItemsAction)
+    | AddItem -> Cmd.ofMsg (PageAddItemAction.InitPage |> PageAddItemAction)
 
 //
 // Interval tasks
@@ -121,7 +234,7 @@ let mutable refreshingProfilerStarted = false
 let refreshProfiler dispatch =
     if not refreshingProfilerStarted then
         async {
-            printfn "[Profiler] Refresh every 15s ..."
+            printfn "[Profiler] Refresh every 60s ..."
 
             while true do
                 let! action =
@@ -132,7 +245,7 @@ let refreshProfiler dispatch =
                     |> Api.loadProfiler (ProfilerAction.ShowProfiler >> ProfilerAction)
                 dispatch action
 
-                do! Async.Sleep (15 * 1000)
+                do! Async.Sleep (60 * 1000)
         }
         |> Async.StartImmediate
     refreshingProfilerStarted <- true
@@ -144,7 +257,7 @@ let init page : Model * Cmd<Action> =
     let model, cmd =
         match user with
         | Some loggedInUser ->
-            let page = page |> Option.defaultValue (MyEdcSets None)
+            let page = page |> Option.defaultValue (AnonymousEdcSets None)
             { initialModel with CurrentUser = Some loggedInUser; CurrentPage = page } |> Model.urlUpdate None
         | _ ->
             { initialModel with CurrentPage = Login } |> Model.urlUpdate None
@@ -164,22 +277,38 @@ let init page : Model * Cmd<Action> =
             |> Cmd.OfAsyncImmediate.result
     ]
 
+let private modifyUrl page =
+    page
+    |> Page.toPath
+    |> Navigation.modifyUrl
+
+let (|IsLoggedIn|_|) = function
+    | { CurrentUser = Some _ } -> Some IsLoggedIn
+    | _ -> None
+
 // The update function computes the next state of the application based on the current state and the incoming events/messages
 // It can also run side-effects (encoded as commands) like calling the server via Http.
 // these commands in turn, can dispatch messages to which the update function will react.
 let update (action : Action) (model : Model) : Model * Cmd<Action> =
     match action with
     | PageAction pageAction ->
-        match pageAction, model with
-        | GoToLogin, { CurrentUser = None } ->
-            { model with CurrentPage = Page.Login }, Navigation.newUrl (Page.toPath Page.Login)
+        let goTo page =
+            { model with CurrentPage = page }, Cmd.batch [
+                Navigation.newUrl (Page.toPath page)
+                page |> pageInitAction
+            ]
 
-        | Logout, { CurrentUser = Some _ } ->
+        match pageAction, model with
+        | Logout, IsLoggedIn ->
             model, Cmd.OfFunc.either User.delete () (fun _ -> LoggedOut) (ErrorMessage.fromExn >> ShowError)
 
-        | GoToMyEdcSets, { CurrentUser = Some _ } ->
-            let page = MyEdcSets model.PageMyEdcModel.SelectedSet
-            { model with CurrentPage = page }, Navigation.newUrl (Page.toPath page)
+        | GoToAnonymousEdcSets, _ -> AnonymousEdcSets model.PageAnonymousEdcModel.SelectedSet |> goTo
+        | GoToMyEdcSets, IsLoggedIn -> MyEdcSets model.PageMyEdcModel.SelectedSet |> goTo
+        | GoToItems, IsLoggedIn -> Items model.PageItemsModel.ItemDetail |> goTo
+        | GoToAddItem, IsLoggedIn -> AddItem |> goTo
+
+        | GoToLogin, IsLoggedIn
+        | _, { CurrentUser = None } -> goTo Login
 
         | _ -> model, Cmd.none
 
@@ -258,19 +387,37 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
         |> List.choose id
         |> Cmd.batch
 
-    | PageMyEdcAction pageAction ->
-        let navigateAction =
+    | PageAnonymousEdcAction pageAction ->
+        let updatedPage =
             match pageAction with
-            | PageMyEdcAction.SelectSet (Some set) ->
-                MyEdcSets (Some set)
-                |> Page.toPath
-                |> Navigation.modifyUrl
-                |> Some
+            | PageEdcAction.SelectSet (Some set) -> Some (AnonymousEdcSets (Some set))
             | _ -> None
 
         let pageModel, action =
             pageAction
-            |> PageMyEdcModel.update
+            |> PageEdcModel.update
+                PageMyEdcAction
+                ShowSuccess
+                ShowError
+                LoggedOutWithError
+                model.PageAnonymousEdcModel
+
+        { model with PageAnonymousEdcModel = pageModel }, [
+            Some action
+            updatedPage |> Option.map modifyUrl
+        ]
+        |> List.choose id
+        |> Cmd.batch
+
+    | PageMyEdcAction pageAction ->
+        let updatedPage =
+            match pageAction with
+            | PageEdcAction.SelectSet (Some set) -> Some (MyEdcSets (Some set))
+            | _ -> None
+
+        let pageModel, action =
+            pageAction
+            |> PageEdcModel.update
                 PageMyEdcAction
                 ShowSuccess
                 ShowError
@@ -279,7 +426,52 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
 
         { model with PageMyEdcModel = pageModel }, [
             Some action
-            navigateAction
+            updatedPage |> Option.map modifyUrl
+        ]
+        |> List.choose id
+        |> Cmd.batch
+
+    | PageItemsAction pageAction ->
+        let updatedPage =
+            match pageAction with
+            | PageItemsAction.ShowDetail id -> Some (Items (Some id))
+            | PageItemsAction.HideDetail -> Some (Items None)
+            | _ -> None
+
+        let pageModel, action =
+            pageAction
+            |> PageItemsModel.update
+                PageItemsAction
+                ShowSuccess
+                ShowError
+                LoggedOutWithError
+                model.PageItemsModel
+
+        { model with PageItemsModel = pageModel }, [
+            Some action
+            updatedPage |> Option.map modifyUrl
+        ]
+        |> List.choose id
+        |> Cmd.batch
+
+    | PageAddItemAction pageAction ->
+        let redirect =
+            match pageAction with
+            | PageAddItemAction.ItemSaved _item -> Some (PageAction GoToItems)
+            | _ -> None
+
+        let pageModel, action =
+            pageAction
+            |> PageAddItemModel.update
+                PageAddItemAction
+                ShowSuccess
+                ShowError
+                LoggedOutWithError
+                model.PageAddItemModel
+
+        { model with PageAddItemModel = pageModel }, [
+            Some action
+            redirect |> Option.map Cmd.ofMsg
         ]
         |> List.choose id
         |> Cmd.batch

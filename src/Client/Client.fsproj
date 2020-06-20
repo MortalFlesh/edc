@@ -15,6 +15,7 @@
         <None Include="style.scss" />
         <Compile Include="..\Shared\Utils.fs" />
         <Compile Include="..\Shared\Shared.fs" />
+        <Compile Include="Validation.fs" />
 
         <Compile Include="Component/Profiler/Model.fs" />
         <Compile Include="Component/Profiler/Profiler.fs" />
@@ -26,21 +27,33 @@
 
         <!-- Stateless Components -->
         <Compile Include="Component/Component.fs" />
+        <Compile Include="Component/Common.fs" />
+        <Compile Include="Component/Tag.fs" />
+        <Compile Include="Component/Item.fs" />
+        <Compile Include="Component/FlatItem.fs" />
 
         <!-- Stateful Components -->
+        <Compile Include="Component/TagsInput/Model.fs" />
+        <Compile Include="Component/Product/Model.fs" />
+
         <Compile Include="Page/Login/Model.fs" />
-        <Compile Include="Page/MyEdcSets/Model.fs" />
+        <Compile Include="Page/EdcSets/Model.fs" />
+        <Compile Include="Page/Items/Model.fs" />
+        <Compile Include="Page/AddItem/Model.fs" />
 
         <!-- App model -->
         <Compile Include="Model.fs" />
+        <Compile Include="Routing.fs" />
+
+        <!-- Stateful Components Views -->
+        <Compile Include="Component/TagsInput/View.fs" />
+        <Compile Include="Component/Product/View.fs" />
 
         <!-- Pages -->
-
-        <!-- Login Page -->
         <Compile Include="Page/Login/View.fs" />
-
-        <!-- MyEdcSets Page -->
-        <Compile Include="Page/MyEdcSets/View.fs" />
+        <Compile Include="Page/EdcSets/View.fs" />
+        <Compile Include="Page/Items/View.fs" />
+        <Compile Include="Page/AddItem/View.fs" />
 
         <Compile Include="View.fs" />
     </ItemGroup>
