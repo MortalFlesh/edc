@@ -21,6 +21,7 @@
         <Compile Include="Component/Profiler/Profiler.fs" />
 
         <Compile Include="Types.fs" />
+        <Compile Include="Page.fs" />
         <Compile Include="LocalStorage.fs" />
         <Compile Include="User.fs" />
         <Compile Include="Api.fs" />
@@ -28,6 +29,7 @@
         <!-- Stateless Components -->
         <Compile Include="Component/Component.fs" />
         <Compile Include="Component/Common.fs" />
+        <Compile Include="Component/Navbar.fs" />
         <Compile Include="Component/Tag.fs" />
         <Compile Include="Component/Item.fs" />
         <Compile Include="Component/FlatItem.fs" />

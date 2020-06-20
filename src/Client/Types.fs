@@ -13,6 +13,20 @@ type InputState =
     | Success
     | WithError of ErrorMessage
 
+type Routing = {
+    GoToLogin: unit -> unit
+    Logout: unit -> unit
+    GoToAnonymousEdcSets: unit -> unit
+    GoToMyEdcSets: unit -> unit
+    GoToItems: unit -> unit
+    GoToAddItem: unit -> unit
+}
+
+[<RequireQualifiedAccess>]
+type BurgerMenu =
+    | Opened
+    | Closed
+
 module FlatItem =
     open Dto.Common
     open Dto.Items
