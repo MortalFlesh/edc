@@ -25,6 +25,7 @@ deploy
 release.cmd
 release.sh
 AssemblyInfo.fs
+deploy.zip
 
 # Paket dependency manager
 .paket/

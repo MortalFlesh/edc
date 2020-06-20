@@ -10,6 +10,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="System.Data.SqlClient" Version="4.6.0" />
+    </ItemGroup>
+
+    <ItemGroup>
         <None Include="paket.references" />
 
         <Compile Include="..\Shared\Utils.fs" />
@@ -23,6 +27,7 @@
 
         <!-- Application common -->
         <Compile Include="Application/Utils.fs" />
+        <Compile Include="Application/Types.fs" />
 
         <!-- Profiler -->
         <Compile Include="Profiler/Errors.fs" />
@@ -35,17 +40,27 @@
         <Compile Include="Domain/Set.fs" />
 
         <!-- Security -->
-        <Compile Include="Security/Token.fs" />
         <Compile Include="Security/User.fs" />
-
-        <!-- Api -->
-
-        <!-- Query -->
-        <Compile Include="Query/Query.fs" />
-        <Compile Include="Query/Items.fs" />
+        <Compile Include="Security/Token.fs" />
 
         <!-- Dto -->
         <Compile Include="Dto.fs" />
+
+        <!-- Database -->
+        <Compile Include="Database/CloudStorage.fs" />
+        <Compile Include="Database/LocalMysql.fs" />
+        <Compile Include="Database/AzureSql.fs" />
+
+        <!-- Api -->
+
+        <!-- Command -->
+        <Compile Include="Command/Command.fs" />
+        <Compile Include="Command/Items.fs" />
+        
+        <!-- Query -->
+        <Compile Include="Query/Query.fs" />
+        <Compile Include="Query/Items.fs" />
+        <!-- <Compile Include="Query/PersonTest.fs" /> -->
 
         <!-- Application & Security -->
         <Compile Include="Application/Application.fs" />

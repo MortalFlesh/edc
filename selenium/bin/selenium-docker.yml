@@ -1,0 +1,39 @@
+version: '3'
+services:
+    hub:
+        environment:
+            - JAVA_OPTS=-Xmx512m
+            - SE_OPTS=-browserTimeout 180
+        image: selenium/hub:3.141
+        ports:
+            - "${SELENIUM_HUB_PORT:-4444}:4444"
+
+    chrome:
+        environment:
+            - JAVA_OPTS=-Xmx512m
+            - HUB_PORT_4444_TCP_ADDR=hub
+            - HUB_PORT_4444_TCP_PORT=4444
+            - SCREEN_WIDTH=1280
+            - SCREEN_HEIGHT=1024
+        image: selenium/node-chrome:3.141
+        volumes:
+            - /dev/shm:/dev/shm
+            - ${PWD}:${PWD}
+        depends_on:
+            - hub
+
+    chrome-debug:
+        environment:
+            - JAVA_OPTS=-Xmx512m
+            - HUB_PORT_4444_TCP_ADDR=hub
+            - HUB_PORT_4444_TCP_PORT=4444
+            - SCREEN_WIDTH=1280
+            - SCREEN_HEIGHT=1024
+        image: selenium/node-chrome-debug:3.141
+        ports:
+            - 5900:5900
+        volumes:
+            - /dev/shm:/dev/shm
+            - ${PWD}:${PWD}
+        depends_on:
+            - hub

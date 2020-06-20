@@ -44,8 +44,21 @@ module String =
         | null | "" -> None
         | string -> Some string
 
+    let trim (string: string) = string.Trim()
+
 [<RequireQualifiedAccess>]
 module Result =
     let toOption = function
         | Ok value -> Some value
         | _ -> None
+
+    let combineErrorMaps r1 r2 =
+        match r1, r2 with
+        | Ok s1, Ok s2 -> Ok (s1, s2)
+        | Error errors1, Error errors2 ->
+            (errors1 |> Map.toList) @ (errors2 |> Map.toList)
+            |> List.distinct
+            |> Map.ofList
+            |> Error
+        | Error e, _
+        | _, Error e -> Error e

@@ -46,7 +46,7 @@ module Result =
         | Ok _, Error err2 -> Error err2
         | Error err1, Error _ -> Error err1
 
-     // combine a list of results, monadically
+    /// combine a list of results, monadically
     let sequence aListOfResults =
         let (<*>) = apply // monadic
         let (<!>) = Result.map
@@ -62,6 +62,20 @@ module Result =
         aListOfResults
         |> sequence
         |> Result.map List.concat
+
+    let list aListOfResults =
+        aListOfResults
+        |> List.choose (function
+            | Ok success -> Some success
+            | _ -> None
+        )
+
+    let listCollect aListOfResults =
+        aListOfResults
+        |> List.collect (function
+            | Ok success -> success
+            | _ -> []
+        )
 
     let orFail = function
         | Ok option -> option
@@ -334,9 +348,25 @@ module AsyncResult =
     let ofResult x : AsyncResult<_, _> =
         x |> Async.retn
 
+    /// Lift an Option into an AsyncResult
+    let ofOption e x : AsyncResult<_, _> =
+        x |> Result.ofOption e |> ofResult
+
     /// Lift a Async into an AsyncResult
     let ofAsync x : AsyncResult<_, _> =
         x |> Async.map Result.Ok
+
+    /// Lift a Async into an AsyncResult and handles exception into Result
+    let ofAsyncCatch f x : AsyncResult<_, _> =
+        x |> ofAsync |> catch f
+
+    /// Lift a Task into an AsyncResult
+    let ofTask x : AsyncResult<_, _> =
+        x |> Async.AwaitTask |> ofAsync
+
+    /// Lift a Task into an AsyncResult and handles exception into Result
+    let ofTaskCatch f x : AsyncResult<_, _> =
+        x |> ofTask |> catch f
 
     //-----------------------------------
     // Utilities lifted from Async

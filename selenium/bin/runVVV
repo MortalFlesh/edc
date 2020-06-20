@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# include functions
+if [ -e ./bin/functions.sh ]; then
+    . ./bin/functions.sh
+fi
+
+# prepare
+clear
+
+logSelenium "Run tests:"
+./vendor/bin/steward run -vvv local chrome --pattern '*Test.php'
+logSelenium "Tests done."
+
+line
+logSelenium " [NOTE] Do not forget to stop server."

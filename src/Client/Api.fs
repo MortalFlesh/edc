@@ -88,5 +88,11 @@ let loadData onSuccess onError onAuthorizationError =
     secure onError >?> (Server.api.LoadData >> callSecuredApi onSuccess onError onAuthorizationError)
 *)
 
+let validateTag onSuccess onError =
+    secure onError >?> (Server.api.ValidateTag >> callSecuredApi onSuccess onError onError)
+
 let loadItems onSuccess onError onAuthorizationError =
     secure onError >?> (Server.api.LoadItems >> callSecuredApi onSuccess onError onAuthorizationError)
+
+let createItem onSuccess onError onAuthorizationError =
+    secure onError >?> (Server.api.CreateItem >> callSecuredApi onSuccess onError onAuthorizationError)

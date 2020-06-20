@@ -102,9 +102,7 @@ module Modal =
 
 type private Input = Input.Option list -> ReactElement
 
-let inputField onSubmit isEnabled (input: Input) onChange title errors value =
-    let error = errors |> Map.tryFind title
-
+let inputField formName onSubmit isEnabled (input: Input) onChange title errors value =
     Field.div [] [
         Field.div [ Field.HasAddons ] [
             Control.p [] [
@@ -119,13 +117,14 @@ let inputField onSubmit isEnabled (input: Input) onChange title errors value =
                     ]
                     Input.Placeholder title
                     Input.Value value
+                    Input.Id (sprintf "%s-%s" formName title)
 
-                    if error |> Option.isSome then Input.Color IsDanger
+                    if errors |> List.isEmpty |> not then Input.Color IsDanger
                 ]
 
-                match error with
-                | Some (ErrorMessage error) -> Help.help [ Help.Color IsDanger ] [ str error ]
-                | _ -> ()
+                errors
+                |> List.map (fun (ErrorMessage error) -> Help.help [ Help.Color IsDanger ] [ str error ])
+                |> div []
             ]
         ]
     ]

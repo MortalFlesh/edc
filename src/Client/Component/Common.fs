@@ -17,9 +17,3 @@ open Shared.Dto.Common
 module Link =
     let link (Link link) =
         a [ Href link; Target "_blank" ] [ str link ]
-
-[<RequireQualifiedAccess>]
-module Tag =
-    let link (Tag tag) =
-        a [ (* Todo - goToTagDetail tag *) ] [ str tag ]
-

@@ -11,20 +11,28 @@ open Fulma
 open Thoth.Json
 
 open PageAddItemModule
+open Shared.Dto.Common
 open Shared.Dto.Items
 
 let page (model: PageAddItemModel) (dispatch: DispatchPageAddItemAction) =
     let isSubmitting = model.SavingStatus = InProgress
+    let itemModel = model.NewItem
 
-    let field = Field.value
-    let errors =
+    let fieldErrors field =
         model.Errors
-        |> Map.toList
-        |> List.map (fun (field, error) -> field |> Field.value, error)
-        |> Map.ofList
+        |> Map.tryFind field
+        |> Option.defaultValue []
 
     let onSubmit = if isSubmitting then ignore else (fun _ -> dispatch PageAddItemAction.SaveItem)
-    let inputField input title onChange = Component.inputField onSubmit (not isSubmitting) input onChange title errors
+    let inputField input field =
+        Component.inputField
+            "AddItem"
+            onSubmit
+            (not isSubmitting)
+            input
+            (PageAddItemAction.changeField field >> dispatch)
+            (field |> Field.title)
+            (field |> fieldErrors)
 
     div [] [
         Component.subTitle "Add Item"
@@ -32,26 +40,51 @@ let page (model: PageAddItemModel) (dispatch: DispatchPageAddItemAction) =
         Columns.columns [] [
             Column.column [ Column.Width (Screen.All, Column.Is12) ] [
                 Columns.columns [ Columns.IsMultiline ] [
-                    Column.column [ Column.Width (Screen.All, Column.Is5) ] [
+                    Column.column [ Column.Width (Screen.All, Column.Is6) ] [
+                        // todo show global Form errors (Field.Form)
 
-                        model.CommonInfo.Name
-                        |> inputField Input.text (field Name) (PageAddItemAction.ChangeName >> dispatch)
+                        // todo - add selector for Type and SubType
 
-                        model.CommonInfo.Note
+                        Component.subTitle "Common"
+
+                        itemModel.Name
+                        |> inputField Input.text Name
+
+                        itemModel.Note
+                        // todo - make i text area or wysiwyg
                         |> Option.defaultValue ""
-                        |> inputField Input.text (field Note) (PageAddItemAction.ChangeNote >> dispatch)
+                        |> inputField Input.text Note
 
-                        // links (text area |> parse "\n" |> List.choose Link.parse)
+                        model.TagsModel
+                        |> Tag.inputField
+                            "AddItem"
+                            onSubmit
+                            (not isSubmitting)
+                            "Tags"
+                            (PageAddItemAction.TagsInputAction >> dispatch)
 
-                        // tags (input
-                        //  (on "tab" -> create tag ))
-                        //  (on focus -> show hint "Use Tab or separate by , to create multiple Tags")
+                        itemModel.Color
+                        |> Option.defaultValue ""
+                        |> inputField Input.text Field.Color
 
+                        (* itemModel.Links
+                        |> Option.defaultValue ""
+                        |> inputField Input.text Links *)
+
+                        itemModel.OwnershipStatus   // todo - select box
+                        |> Option.defaultValue ""
+                        |> inputField Input.text OwnershipStatus
+                    ]
+
+                    Column.column [ Column.Width (Screen.All, Column.Is6) ] [
+                        Component.subTitle "Product"
+
+                        model.NewProduct |> Product.form onSubmit isSubmitting (PageAddItemAction.ProductAction >> dispatch)
                     ]
                 ]
 
                 Columns.columns [ Columns.IsMultiline ] [
-                    Column.column [ Column.Width (Screen.All, Column.Is5) ] [
+                    Column.column [ Column.Width (Screen.All, Column.Is6) ] [
 
                         ("Save", "Saving")
                         |> Component.submit onSubmit model.SavingStatus

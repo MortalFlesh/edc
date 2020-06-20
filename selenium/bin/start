@@ -1,0 +1,20 @@
+# config
+INSTANCES=3
+
+# include functions
+if [ -e ./bin/functions.sh ]; then
+    . ./bin/functions.sh
+fi
+
+# prepare
+clear
+
+# tests
+logSelenium "Docker start:"
+docker-compose -f ./bin/selenium-docker.yml up -d chrome
+docker-compose -f ./bin/selenium-docker.yml scale chrome="$INSTANCES"
+logSelenium "Docker is running in $INSTANCES instance(s) ..."
+
+sleep 5
+line
+echo "Done"
