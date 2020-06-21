@@ -129,20 +129,12 @@ let inputField formName onSubmit isEnabled (input: Input) onChange title errors 
         ]
     ]
 
-let submit onSubmit status (title, titleSubmitting)  =
+let submit onSubmit status title  =
     Button.button [
-        Button.Disabled (status = InProgress)
+        Button.IsLoading (status = InProgress)
         Button.Color IsPrimary
         Button.OnClick (fun _ -> onSubmit())
-    ] [
-        match status with
-        | InProgress ->
-            Icon.asyncStatus status
-            span [] [ str " " ]
-            str (sprintf "%s ..." titleSubmitting)
-        | _ ->
-            str title
-    ]
+    ] [ str title ]
 
 let table headers row items =
     Table.table [

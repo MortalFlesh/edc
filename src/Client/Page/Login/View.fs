@@ -41,19 +41,7 @@ let page (model: PageLoginModel) (dispatch: DispatchPageLoginAction) =
                     ]
 
                     Column.column [ Column.Width (Screen.All, Column.Is1); Column.Offset (Screen.All, Column.Is1) ] [
-                        Button.a [
-                            Button.Disabled isLogging
-                            Button.Color IsSuccess
-                            Button.OnClick (fun _ -> onSubmit())
-                        ] [
-                            if isLogging
-                                then
-                                    model.LoginStatus |> Component.Icon.asyncStatus
-                                    span [] [ str " " ]
-                                    str "Logging ..."
-                                else
-                                    str "Login"
-                        ]
+                        "Login" |> Component.submit onSubmit model.LoginStatus
                     ]
 
                     match model.LoginError with

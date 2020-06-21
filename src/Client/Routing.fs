@@ -1,15 +1,6 @@
 [<AutoOpen>]
 module Routing
 
-type Routing = {
-    GoToLogin: unit -> unit
-    Logout: unit -> unit
-    GoToAnonymousEdcSets: unit -> unit
-    GoToMyEdcSets: unit -> unit
-    GoToItems: unit -> unit
-    GoToAddItem: unit -> unit
-}
-
 open Model
 
 let routing dispatch = {

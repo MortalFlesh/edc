@@ -34,11 +34,11 @@ let page (model: PageAddItemModel) (dispatch: DispatchPageAddItemAction) =
             (field |> Field.title)
             (field |> fieldErrors)
 
-    Columns.columns [] [
-        Column.column [ Column.Width (Screen.All, Column.Is12) ] [
+    Columns.columns [ Columns.IsMultiline ] [
+        Column.column [ Column.Width (Screen.All, Column.IsFull) ] [
             Component.subTitle "Add Item"
         ]
-        Column.column [ Column.Width (Screen.All, Column.Is12) ] [
+        Column.column [ Column.Width (Screen.All, Column.IsFull) ] [
             Columns.columns [ Columns.IsMultiline ] [
                 Column.column [ Column.Width (Screen.All, Column.Is6) ] [
                     // todo show global Form errors (Field.Form)
@@ -85,10 +85,7 @@ let page (model: PageAddItemModel) (dispatch: DispatchPageAddItemAction) =
 
             Columns.columns [ Columns.IsMultiline ] [
                 Column.column [ Column.Width (Screen.All, Column.Is6) ] [
-
-                    ("Save", "Saving")
-                    |> Component.submit onSubmit model.SavingStatus
-
+                    "Save" |> Component.submit onSubmit model.SavingStatus
                 ]
             ]
         ]
