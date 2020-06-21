@@ -6,6 +6,7 @@ open Elmish.Navigation
 
 open Thoth.Json
 
+open PageJoinModule
 open PageLoginModule
 open PageEdcModule
 open PageItemsModule
@@ -29,6 +30,7 @@ type Model = {
 
     Profiler: ProfilerModel
 
+    PageJoin: PageJoinModel
     PageLogin: PageLoginModel
     PageAnonymousEdcModel: PageEdcModel
     PageMyEdcModel: PageEdcModel
@@ -48,6 +50,7 @@ module Model =
 //
 
 type PageAction =
+    | GoToJoin
     | GoToLogin
     | Logout
     | GoToAnonymousEdcSets
@@ -73,6 +76,7 @@ type Action =
     | ProfilerAction of ProfilerAction
 
     | PageAction of PageAction
+    | PageJoinAction of PageJoinAction
     | PageLoginAction of PageLoginAction
     | PageAnonymousEdcAction of PageEdcAction
     | PageMyEdcAction of PageEdcAction
@@ -91,6 +95,7 @@ let initialModel = {
 
     Profiler = ProfilerModel.empty
 
+    PageJoin = PageJoinModel.empty
     PageLogin = PageLoginModel.empty
     PageAnonymousEdcModel = PageEdcModel.empty
     PageMyEdcModel = PageEdcModel.empty
@@ -99,6 +104,7 @@ let initialModel = {
 }
 
 let pageInitAction = function
+    | Page.Join -> Cmd.ofMsg (PageJoinModule.InitPage |> PageJoinAction)
     | Page.Login -> Cmd.ofMsg (PageLoginAction.InitPage |> PageLoginAction)
     | Page.AnonymousEdcSets set -> Cmd.ofMsg (PageEdcAction.InitPage set |> PageMyEdcAction)
     | Page.MyEdcSets set -> Cmd.ofMsg (PageEdcAction.InitPage set |> PageMyEdcAction)
@@ -137,7 +143,10 @@ let init page : Model * Cmd<Action> =
     let model, cmd =
         match user with
         | Some loggedInUser ->
-            let page = page |> Option.defaultValue (AnonymousEdcSets None)
+            let page =
+                page
+                |> Option.bind (function Page.Join | Page.Login -> None | page -> Some page)
+                |> Option.defaultValue (AnonymousEdcSets None)
             { initialModel with CurrentUser = Some loggedInUser; CurrentPage = page } |> Model.urlUpdate None
         | _ ->
             { initialModel with CurrentPage = Page.Login } |> Model.urlUpdate None
@@ -179,6 +188,9 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
             ]
 
         match pageAction, model with
+        | GoToJoin, IsLoggedIn -> goTo (MyEdcSets None)
+        | GoToLogin, IsLoggedIn -> goTo (MyEdcSets None)
+
         | Logout, IsLoggedIn ->
             model, Cmd.OfFunc.either User.delete () (fun _ -> LoggedOut) (ErrorMessage.fromExn >> ShowError)
 
@@ -187,7 +199,7 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
         | GoToItems, IsLoggedIn -> Items model.PageItemsModel.ItemDetail |> goTo
         | GoToAddItem, IsLoggedIn -> AddItem |> goTo
 
-        | GoToLogin, IsLoggedIn
+        | GoToJoin, { CurrentUser = None } -> goTo Page.Join
         | _, { CurrentUser = None } -> goTo Page.Login
 
         | _ -> model, Cmd.none
@@ -248,6 +260,29 @@ let update (action : Action) (model : Model) : Model * Cmd<Action> =
     //
     // Pages
     //
+    | PageJoinAction pageAction ->
+        let joinAction =
+            match pageAction with
+            | PageJoinAction.JoinSuccess newUser ->
+                Cmd.OfFunc.either User.save newUser (fun _ -> LoggedIn newUser) (ErrorMessage.fromExn >> ShowError)
+                |> Some
+            | _ -> None
+
+        let pageModel, action =
+            pageAction
+            |> PageJoinModel.update
+                PageJoinAction
+                ShowSuccess
+                ShowError
+                model.PageJoin
+
+        { model with PageJoin = pageModel }, [
+            joinAction
+            Some action
+        ]
+        |> List.choose id
+        |> Cmd.batch
+
     | PageLoginAction pageAction ->
         let loginAction =
             match pageAction with

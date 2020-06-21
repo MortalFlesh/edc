@@ -37,23 +37,100 @@ module Api =
             // Public actions
             //
 
+            Join = fun (email, username, password) -> asyncResult {
+                let! email =
+                    email
+                    |> Dto.Deserialize.email
+                    |> AsyncResult.ofResult <@> (EmailError.format >> ErrorMessage)
+
+                let! credentials =
+                    (username, password)
+                    |> Dto.Deserialize.credentials
+                    |> AsyncResult.ofResult <@> (CredentialsError.format >> ErrorMessage)
+
+                let usernameOrEmail = [
+                    email |> UsernameOrEmail.Email
+                    credentials.Username |> UsernameOrEmail.Username
+                ]
+
+                let! slug =
+                    credentials.Username
+                    |> Username.value
+                    |> Slug.create
+                    |> Result.ofOption (ErrorMessage "Try to use a different username.")
+                    |> AsyncResult.ofResult
+
+                let! isUserExistsResults =
+                    usernameOrEmail
+                    |> List.map (UsersQuery.isUserExists logError currentApplication.Dependencies.StorageAccount slug)
+                    |> Async.Parallel
+                    |> AsyncResult.ofAsyncCatch (fun e ->
+                        e.Message
+                        |> sprintf "Join.IsUserExists error: %A"
+                        |> logError
+
+                        ErrorMessage "Please try it again, we have some issues."
+                    )
+
+                let! isUserExists =
+                    isUserExistsResults
+                    |> Seq.toList
+                    |> Result.sequence
+                    |> AsyncResult.ofResult <@> (UsersError.format >> ErrorMessage)
+
+                do!
+                    match isUserExists |> List.zip usernameOrEmail with
+                    | [ (_, true); (_, true) ] -> ErrorMessage "There is already a user with this username or e-mail." |> AsyncResult.ofError
+                    | [ (usernameOrEmail, true); _ ]
+                    | [ _; (usernameOrEmail, true) ] -> usernameOrEmail |> UsernameOrEmail.valueWithType |> sprintf "There is already a user with %s." |> ErrorMessage |> AsyncResult.ofError
+                    | _ -> AsyncResult.ofSuccess ()
+
+                let! userProfile =
+                    (credentials.Username, credentials.Password, email, slug)
+                    |> Command.UsersCommand.create currentApplication.Dependencies.StorageAccount <@> ErrorMessage
+
+                let user = {
+                    Id = userProfile.Id
+                    Username = userProfile.Username
+                    Token =
+                        userProfile
+                        |> JWTToken.create
+                            currentApplication.Instance
+                            currentApplication.TokenKey
+                }
+
+                return user |> Dto.Serialize.user
+            }
+
             Login = fun credentials -> asyncResult {
                 let! credentials =
                     credentials
                     |> Dto.Deserialize.credentials
                     |> AsyncResult.ofResult <@> (CredentialsError.format >> ErrorMessage)
 
+                let usernameOrEmail =
+                    // todo - allow email in loginCredentials as well.. (or just type it explicitly)
+                    credentials.Username
+                    |> Username.value
+                    |> UsernameOrEmail.UsernameOrEmail
+
+                let! userProfile =
+                    UsersQuery.loadUser logError currentApplication.Dependencies.StorageAccount usernameOrEmail credentials.Password
+                    <@> (UsersError.format >> ErrorMessage)
+
+                let! userProfile =
+                    userProfile
+                    |> Result.ofOption (ErrorMessage "No user found by given credentials.")
+                    |> AsyncResult.ofResult
+
                 let user = {
-                    Username = credentials.Username
+                    Id = userProfile.Id
+                    Username = userProfile.Username
                     Token =
-                        JWTToken.create
+                        userProfile
+                        |> JWTToken.create
                             currentApplication.Instance
                             currentApplication.TokenKey
-                            [
-                                CustomItem.String (UserCustomData.Username, credentials.Username |> Username.value)
-                                CustomItem.String (UserCustomData.DisplayName, credentials.Username |> Username.value)
-                                CustomItem.Strings (UserCustomData.Groups, [])
-                            ]
                 }
 
                 return user |> Dto.Serialize.user
@@ -92,16 +169,11 @@ module Api =
             }
 
             LoadItems = Authorize.withLogin >??> fun user () -> asyncResult {
-                let mySqlLocalConnection = currentApplication.Dependencies.MysqlDatabase |> Database.MySql.MySql.connect
-                let azureSqlConnection = currentApplication.Dependencies.AzureSqlDatabase |> Database.AzureSql.AzureSql.connect
-
                 let! data =
                     ItemsQuery.load
                         logError
                         currentApplication.Dependencies.StorageAccount
-                        mySqlLocalConnection
-                        azureSqlConnection
-                        user.Username
+                        user.Id
                     <@> (ItemsError.format >> ErrorMessage)
 
                 return data |> List.map Dto.Serialize.itemEntity
@@ -114,12 +186,9 @@ module Api =
                     |> AsyncResult.ofResult <@> (sprintf "%A" >> ErrorMessage)
                     //|> AsyncResult.ofResult <@> (DeserializeItemError.format >> ErrorMessage)
 
-                let mysqlLocalConnection = currentApplication.Dependencies.MysqlDatabase |> Database.MySql.MySql.connect
-                let azureSqlConnection = currentApplication.Dependencies.AzureSqlDatabase |> Database.AzureSql.AzureSql.connect
-
                 let! itemEntity =
                     item
-                    |> Command.ItemsCommand.create currentApplication.Dependencies.StorageAccount mysqlLocalConnection azureSqlConnection user.Username <@> ErrorMessage
+                    |> Command.ItemsCommand.create currentApplication.Dependencies.StorageAccount user.Id <@> ErrorMessage
 
                 return itemEntity.Item |> Dto.Serialize.item
             }

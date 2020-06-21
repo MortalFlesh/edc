@@ -38,6 +38,7 @@
         <Compile Include="Component/TagsInput/Model.fs" />
         <Compile Include="Component/Product/Model.fs" />
 
+        <Compile Include="Page/Join/Model.fs" />
         <Compile Include="Page/Login/Model.fs" />
         <Compile Include="Page/EdcSets/Model.fs" />
         <Compile Include="Page/Items/Model.fs" />
@@ -52,6 +53,7 @@
         <Compile Include="Component/Product/View.fs" />
 
         <!-- Pages -->
+        <Compile Include="Page/Join/View.fs" />
         <Compile Include="Page/Login/View.fs" />
         <Compile Include="Page/EdcSets/View.fs" />
         <Compile Include="Page/Items/View.fs" />

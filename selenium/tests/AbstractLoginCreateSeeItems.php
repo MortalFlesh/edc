@@ -6,11 +6,17 @@ use Faker\Factory;
 use Faker\Generator;
 use MF\Edc\Component\AddItemComponent;
 use MF\Edc\Component\ItemsComponent;
+use MF\Edc\Component\JoinPageComponent;
 use MF\Edc\Component\LoginPageComponent;
 use MF\Edc\Component\MenuComponent;
+use MF\Edc\Component\TitlePageComponent;
 
 abstract class AbstractLoginCreateSeeItems extends AbstractEdcTestCase
 {
+    /** @var TitlePageComponent */
+    private $titlePage;
+    /** @var JoinPageComponent */
+    private $joinPage;
     /** @var LoginPageComponent */
     private $loginPage;
     /** @var MenuComponent */
@@ -27,6 +33,8 @@ abstract class AbstractLoginCreateSeeItems extends AbstractEdcTestCase
      */
     public function init(): void
     {
+        $this->titlePage = new TitlePageComponent($this);
+        $this->joinPage = new JoinPageComponent($this);
         $this->loginPage = new LoginPageComponent($this);
         $this->menu = new MenuComponent($this);
         $this->items = new ItemsComponent($this);
@@ -35,12 +43,27 @@ abstract class AbstractLoginCreateSeeItems extends AbstractEdcTestCase
         $this->faker = Factory::create();
     }
 
-    public function shouldLoginCreateItemsAndSeeThem(string $username): void
+    public function shouldLoginCreateItemsAndSeeThem(string $email): void
     {
-        $this->debug('Login to page with %s', $username);
-        $this->loginPage->goToLoginPage();
+        [$username] = explode('@', $email);
+        $password = $this->faker->password;
 
-        $this->loginPage->login($username, $this->faker->password);
+        $this->debug('Go to title page');
+        $this->titlePage->goToTitlePage();
+
+        $this->debug('Join to page with %s', $email);
+        $this->menu->goTo('Join');
+
+        $this->joinPage->join($username, $email, $password);
+        $this->loginPage->assertLoggedIn($username);
+        $this->loginPage->logout();
+
+        $usernameOrEmail = $this->faker->randomElement([$username, $email]);
+
+        $this->debug('Login to page with %s', $usernameOrEmail);
+        $this->menu->goTo('Log in');
+
+        $this->loginPage->login($usernameOrEmail, $password);
         $this->loginPage->assertLoggedIn($username);
 
         $this->debug('Go to items');

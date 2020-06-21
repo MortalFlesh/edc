@@ -26,7 +26,6 @@ type PageLoginModel = {
     PasswordError: ErrorMessage option
     LoginError: ErrorMessage option
 
-    User: User option
     LoginStatus: AsyncStatus
 }
 
@@ -54,7 +53,6 @@ module PageLoginModel =
         PasswordError = None
         LoginError = None
 
-        User = None
         LoginStatus = Inactive
     }
 
@@ -117,5 +115,5 @@ module PageLoginModel =
                 |> Cmd.OfAsyncImmediate.result
                 |> Cmd.map liftAction
 
-        | LoginSuccess user ->
-            { model with LoginStatus = Inactive; User = Some user }, Cmd.none
+        | LoginSuccess _ ->
+            { model with LoginStatus = Inactive }, Cmd.none

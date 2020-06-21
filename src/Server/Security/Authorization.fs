@@ -94,8 +94,8 @@ module Authorize =
             let! user =
                 renewedToken
                 |> JWTToken.userData appInstance appKey
+                |> Result.teeError (sprintf "Unexpected Renewed JWT error: %A" >> logAuthorizationError)
                 |> AsyncResult.ofResult <@> (fun _ -> SecuredRequestError.OtherError (ErrorMessage "Unexpected JWT error."))
-                >>@ (sprintf "Unexpected Renewed JWT error: %A" >> logAuthorizationError)
 
             let! response =
                 requestData

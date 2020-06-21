@@ -92,7 +92,7 @@ abstract class AbstractEdcComponent extends AbstractComponent
         return $elements[$index] ?? null;
     }
 
-    protected function clickOnLink(string $partialLinkText, string $expectedPartialTitle): void
+    protected function clickOnLink(string $partialLinkText, string $expectedPartialTitle = 'EDC'): void
     {
         $this->waitForPartialLinkText($partialLinkText)->click();
         $this->waitForPartialTitle($expectedPartialTitle);
@@ -140,5 +140,11 @@ abstract class AbstractEdcComponent extends AbstractComponent
     protected function milliSleep(int $milliseconds): void
     {
         usleep($milliseconds * 1000);
+    }
+
+    protected function hoverByCss(string $selector): void
+    {
+        $element = $this->findByCss($selector);
+        $this->wd->getMouse()->mouseMove($element->getCoordinates());
     }
 }

@@ -117,7 +117,7 @@ let inputField formName onSubmit isEnabled (input: Input) onChange title errors 
                     ]
                     Input.Placeholder title
                     Input.Value value
-                    Input.Id (sprintf "%s-%s" formName title)
+                    Input.Id (sprintf "%s-%s" formName (title.Replace(" ", "")))
 
                     if errors |> List.isEmpty |> not then Input.Color IsDanger
                 ]

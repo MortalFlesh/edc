@@ -10,7 +10,7 @@ abstract class AbstractEdcTestCase extends AbstractTestCase
     private const BASE_PUBLIC_URL = 'https://www.myedc.cz';
     private const BASE_DIRECT_URL = 'http://myedc.cz';
 
-    private const BASE_URL = self::BASE_PUBLIC_URL;
+    private const BASE_URL = self::BASE_LOCAL_URL;
 
     /** @var string */
     public $baseUrl;

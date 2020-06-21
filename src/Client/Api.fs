@@ -51,8 +51,11 @@ let private callSecuredApi<'Success, 'Action>
 // Public actions
 //
 
-let login onSuccess onError credentials =
-    Server.api.Login credentials |> callApi onSuccess onError
+let join onSuccess onError =
+    Server.api.Join >> callApi onSuccess onError
+
+let login onSuccess onError =
+    Server.api.Login >> callApi onSuccess onError
 
 let loadProfiler onLoad token = async {
     let! profiler = Server.api.LoadProfiler token
