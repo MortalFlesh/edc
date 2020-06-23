@@ -6,6 +6,7 @@ open Shared.Dto.Common
 
 type Page =
     // Public
+    | Join
     | Login
     | AnonymousEdcSets of Id option
 
@@ -20,6 +21,7 @@ module Page =
 
     [<RequireQualifiedAccess>]
     type private Pages =
+        | Join
         | Login
         | AnonymousEdcSets
         | MyEdcSets
@@ -29,6 +31,7 @@ module Page =
     [<RequireQualifiedAccess>]
     module private Pages =
         let ofPage = function
+            | Join -> Pages.Join, None
             | Login -> Pages.Login, None
             | AnonymousEdcSets id -> Pages.AnonymousEdcSets, id
             | MyEdcSets id -> Pages.MyEdcSets, id
@@ -54,6 +57,14 @@ module Page =
             |> List.map (snd >> PageDefinition.page)
 
     let private pagesDefinitions = [
+        Pages.Join => {
+            Path = "join"
+            DetailPath = None
+            Page = Join
+            Parsers = [
+                map Join (s "join")
+            ]
+        }
         Pages.Login => {
             Path = "login"
             DetailPath = None
@@ -114,11 +125,16 @@ module Page =
         | Items (Some _) as detail -> Pages.Items |> withDetail detail
 
         // List, Indexes, ...
+        | Join
         | Login
         | AnonymousEdcSets None
         | MyEdcSets None
         | Items None
         | AddItem -> pagesDefinitions |> PagesDefinitions.pages
+
+    //
+    // Generic functions
+    //
 
     let toPath page =
         let p, detail = Pages.ofPage page

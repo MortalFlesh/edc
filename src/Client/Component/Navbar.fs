@@ -67,7 +67,7 @@ let private profileItemEnd page routing = function
         fragment [] [
             Navbar.Item.a [
                 Navbar.Item.IsActive true
-                Navbar.Item.Props [ OnClick (ignore (* todo go to registration *)) ]
+                Navbar.Item.Props [ OnClick (fun _ -> routing.GoToJoin()) ]
             ] [ str "Join" ]
 
             Navbar.Item.a [
@@ -98,7 +98,7 @@ let private profileItemBrand routing =
         fragment [] [
             Navbar.Item.a [
                 Navbar.Item.IsActive true
-                Navbar.Item.Props [ OnClick (ignore (* todo - go to registration *)) ]
+                Navbar.Item.Props [ OnClick (fun _ -> routing.GoToJoin()) ]
                 hiddenOnDesktop
             ] [ str "Join" ]
 

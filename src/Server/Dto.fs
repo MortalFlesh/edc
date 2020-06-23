@@ -167,16 +167,17 @@ module Dto =
 
             let weightToGrams = Weight.value
 
-            let deserializeOption f v =
-                match v with
+            let deserializeOption f = function
                 | Some v -> v |> f <!> Some
                 | _ -> Ok None
 
-        let credentials: Username * Password -> Result<Credentials, CredentialsError> = function
+        let email: Email -> Result<Email, EmailError> = Email.value >> Email.create
+
+        let credentials: Username * Shared.Password -> Result<Credentials, CredentialsError> = function
             | Username "", Password "" -> Error EmptyCredentials
             | Username "", _ -> Error EmptyUsername
             | _, Password "" -> Error EmptyPassword
-            | username, password -> Ok { Username = username; Password = password }
+            | username, password -> Ok { Username = username; Password = password |> Password.ofUserInput }
 
         let private ownership: Dto.Common.OwnershipStatus -> OwnershipStatus = function
             | Dto.Common.OwnershipStatus.Own -> Own

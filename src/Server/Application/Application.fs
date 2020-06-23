@@ -26,8 +26,6 @@ type CurrentApplication = {
 }
 
 and Dependencies = {
-    MysqlDatabase: MySqlConnectionString
-    AzureSqlDatabase: AzureSqlConnectionString
     StorageAccount: CloudStorageAccount
 }
 
@@ -149,30 +147,6 @@ module CurrentApplication =
             getEnvironmentValue environment tryParse (sprintf "Environment variable %A for Cloud storage account is not set.")
             >=> Result.ofOption "Cloud storage account could not be parsed. Connection string is either empty, or in wrong format."
 
-        [<RequireQualifiedAccess>]
-        module Database =
-            let azureSqlConnectionString environment kvSecret (connectionStringVarName, adminPassEnvVar, adminPassSecret) = asyncResult {
-                let! (ConnectionString connectionString) =
-                    connectionStringVarName
-                    |> getEnvironmentValue environment ConnectionString ConnectionStringError.ConnectionStringMissing
-                    |> AsyncResult.ofResult
-
-                let! (DatabasePassword adminPass) =
-                    match adminPassEnvVar |> getEnvironmentValue environment DatabasePassword ConnectionStringError.MissingPassword with
-                    | Ok predefinedPassword ->
-                        AsyncResult.ofSuccess predefinedPassword
-                    | _ ->
-                        adminPassSecret
-                        |> kvSecret
-                        |> AsyncResult.map DatabasePassword
-                        |> AsyncResult.mapError (KeyVaultError.format >> ConnectionStringError.MissingPassword)
-
-                return connectionString.Replace("{your_password}", adminPass) |> ConnectionString |> AzureSqlConnectionString
-            }
-
-            let mysqlLocalConnectionString environment =
-                getEnvironmentValue environment (ConnectionString >> MySqlConnectionString) ConnectionStringError.MissingPassword
-
         let profilerToken environment kvSecret (envVar, kvKey) =
             let token =
                 envVar
@@ -207,15 +181,9 @@ module CurrentApplication =
             let tokenKey =
                 match debug with
                 | Dev -> JWTKey.forDevelopment
-                | Prod -> JWTKey.generate()
+                | Prod -> JWTKey.generate() // todo - get from KV, so logged users wont be logged out with new release, but allow it, by changing the KV value
 
             let! storageAccount = "STORAGE_CONNECTIONSTRING" |> Environment.storageAccount environment
-            let! mysqlConnectionString = "MYSQLCONNSTR_localdb" |> Environment.Database.mysqlLocalConnectionString environment <@> ConnectionStringError.format
-
-            let! azureSqlConnectionString =
-                ("SQLAZURECONNSTR_mf-edc-db", "ADMIN_DB_PASS", "mf-edc-admin-pass")
-                |> Environment.Database.azureSqlConnectionString environment kvSecret
-                |> Async.RunSynchronously <@> ConnectionStringError.format
 
             let profilerToken = ("PROFILER_TOKEN", "profiler-token") |> Environment.profilerToken environment kvSecret
             let! publicPath = "public_path" |> Environment.publicPath environment
@@ -233,8 +201,6 @@ module CurrentApplication =
                 PublicPath = publicPath
                 AppInsightKey = appInsightKey
                 Dependencies = {
-                    MysqlDatabase = mysqlConnectionString
-                    AzureSqlDatabase = azureSqlConnectionString
                     StorageAccount = storageAccount
                 }
             }

@@ -43,6 +43,7 @@ let view (model: Model) (dispatch: Dispatch) =
             globalMessages model
 
             match model.CurrentPage with
+            | Join -> PageJoin.page model.PageJoin (PageJoinAction >> dispatch)
             | Login -> PageLogin.page model.PageLogin (PageLoginAction >> dispatch)
             | AnonymousEdcSets _ -> PageEdcSets.page model.PageAnonymousEdcModel (PageAnonymousEdcAction >> dispatch)
             | MyEdcSets _ -> PageEdcSets.page model.PageMyEdcModel (PageMyEdcAction >> dispatch)

@@ -34,12 +34,12 @@ module CloudStorage =
 
     [<RequireQualifiedAccess>]
     type Owner =
-        | User of Shared.Username
+        | User of Id
 
     [<RequireQualifiedAccess>]
     module private Owner =
         let value = function
-            | Owner.User (Shared.Username username) -> username
+            | Owner.User id -> id |> Id.value
 
     [<RequireQualifiedAccess>]
     type TableError =
@@ -117,6 +117,86 @@ module CloudStorage =
                 Name = TagName dbEntity.TagName
             }
         }
+
+    [<AutoOpen>]
+    module UserEntity =
+        open Shared
+
+        type UserDbEntity(userType: string, id: string, username: string, password: string, email: string, slug: string) =
+            inherit TableEntity(
+                partitionKey = userType,
+                rowKey = id
+            )
+
+            new () = UserDbEntity(null, null, null, null, null, null)
+
+            new (userType, userProfile: UserProfile, password) =
+                let userType = userType |> UserType.value
+                let id = userProfile.Id |> Id.value
+                let userName = userProfile.Username |> Username.value
+                let password =
+                    match password |> Password.encryptedValue with
+                    | Some password -> password
+                    | _ -> failwith "Password is not encrypted!"
+                let email = userProfile.Email |> Email.value
+                let slug = userProfile.Slug |> Slug.value
+
+                UserDbEntity(userType, id, userName, password, email, slug)
+
+            member val Username = username with get, set
+            member val Password = password with get, set
+            member val Email = email with get, set
+            member val Slug = slug with get, set
+
+        [<RequireQualifiedAccess>]
+        module UserDbEntity =
+            let hydrate password: UserDbEntity -> UserProfile option = fun dbEntity -> maybe {
+                do! Password.verify (Current dbEntity.Password, TypedIn password)
+
+                let! id = dbEntity.RowKey |> Id.tryParse
+                let username = Username dbEntity.Username
+                let email = Email dbEntity.Email
+                let slug = Slug dbEntity.Slug
+
+                return {
+                    Id = id
+                    Username = username
+                    Email = email
+                    Slug = slug
+                }
+            }
+
+            let private filterByUsernameOrEmail usernameOrEmail =
+                TableQuery.CombineFilters(
+                    TableQuery.GenerateFilterCondition("Username", QueryComparisons.Equal, usernameOrEmail |> UsernameOrEmail.value),
+                    TableOperators.Or,
+                    TableQuery.GenerateFilterCondition("Email", QueryComparisons.Equal, usernameOrEmail |> UsernameOrEmail.value)
+                )
+
+            let private filterBySlug slug =
+                TableQuery.GenerateFilterCondition("Slug", QueryComparisons.Equal, slug |> Slug.value)
+
+            let queryUser userType usernameOrEmail =
+                TableQuery<UserDbEntity>().Where(
+                    TableQuery.CombineFilters(
+                        TableQuery.GenerateFilterCondition(TableAttribute.PartitionKey, QueryComparisons.Equal, userType |> UserType.value),
+                        TableOperators.And,
+                        filterByUsernameOrEmail usernameOrEmail
+                    )
+                )
+
+            let exists userType usernameOrEmail slug =
+                TableQuery<UserDbEntity>().Where(
+                    TableQuery.CombineFilters(
+                        TableQuery.GenerateFilterCondition(TableAttribute.PartitionKey, QueryComparisons.Equal, userType |> UserType.value),
+                        TableOperators.And,
+                        TableQuery.CombineFilters(
+                            filterByUsernameOrEmail usernameOrEmail,
+                            TableOperators.Or,
+                            filterBySlug slug
+                        )
+                    )
+                )
 
     type ProductDbEntity(manufacturer: string, id: string, name: string, priceAmount: float, priceCurrency: string, ean: string, links: string) =
         inherit TableEntity(
@@ -442,7 +522,7 @@ module CloudStorage =
 
         [<AutoOpen>]
         module private Common =
-            // https://docs.microsoft.com/cs-cz/dotnet/fsharp/using-fsharp-on-azure/table-storage
+            // @see https://docs.microsoft.com/cs-cz/dotnet/fsharp/using-fsharp-on-azure/table-storage
 
             let table (storageAccount: CloudStorageAccount) tableName =
                 try
@@ -582,3 +662,25 @@ module CloudStorage =
                 |> Seq.toList
                 |> Result.list
         }
+
+        // Users
+
+        let insertUser storageAccount userType password (userProfile: UserProfile) =
+            try
+                UserDbEntity(userType, userProfile, password)
+                |> insertEntity storageAccount TableName.User
+            with
+            | e -> TableError.ExecuteError (TableName.User, e) |> AsyncResult.ofError
+
+        let selectUser logError storageAccount userType usernameOrEmail password =
+            usernameOrEmail
+            |> UserDbEntity.queryUser userType
+            |> select storageAccount TableName.User
+            |> AsyncResult.teeError (TableError.format >> logError)
+            |> AsyncResult.map (List.tryHead >> Option.bind (UserDbEntity.hydrate password))
+
+        let isUserExists logError storageAccount userType usernameOrEmail slug =
+            UserDbEntity.exists userType usernameOrEmail slug
+            |> select storageAccount TableName.User
+            |> AsyncResult.teeError (TableError.format >> logError)
+            |> AsyncResult.map (List.tryHead >> Option.isSome)

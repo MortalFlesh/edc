@@ -14,6 +14,7 @@ type InputState =
     | WithError of ErrorMessage
 
 type Routing = {
+    GoToJoin: unit -> unit
     GoToLogin: unit -> unit
     Logout: unit -> unit
     GoToAnonymousEdcSets: unit -> unit

@@ -10,3 +10,4 @@ group Server
     Azure.Security.KeyVault.Secrets
     Azure.Identity
     Slugify.Core
+    BCrypt.Net-Core

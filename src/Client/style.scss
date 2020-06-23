@@ -13,6 +13,8 @@ $FontPathOpenSans: "~open-sans-fonts/open-sans";
 $family-primary: 'Open Sans';
 
 // Custom theme variables
+$orange-edc: #df691a;
+
 // @see https://jenil.github.io/bulmaswatch/darkly/
 @import "~bulmaswatch/darkly/_variables.scss";
 
@@ -29,4 +31,4 @@ $family-primary: 'Open Sans';
 // Profiler
 @import "./Component/Profiler/style.scss";
 
-@import "./style/custom.scss"
+@import "./style/custom.scss";

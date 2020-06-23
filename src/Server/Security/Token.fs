@@ -11,8 +11,8 @@ type JwtValidationError =
     | MissingKeyData
     | Unexpected of exn
     | TokenStatus of string
+    | MissingId
     | MissingUsername
-    | MissingDisplayName
     | MissingGroups
 
 type AuthorizationError =
@@ -26,8 +26,8 @@ type AuthorizationError =
 
 [<RequireQualifiedAccess>]
 module UserCustomData =
+    let [<Literal>] Id = "user_id"
     let [<Literal>] Username = "username"
-    let [<Literal>] DisplayName = "user"
     let [<Literal>] Groups = "groups"
 
 [<RequireQualifiedAccess>]
@@ -60,10 +60,6 @@ type PermissionGroup = PermissionGroup of string
 module PermissionGroup =
     let value (PermissionGroup group) = group
 
-[<RequireQualifiedAccess>]
-module Username =
-    let value (Username username) = username
-
 type Permission =
     | ValidToken
     | Group of PermissionGroup
@@ -77,8 +73,8 @@ module JWTToken =
     type private GrantedToken = GrantedToken of Jwt
 
     type private UserData = {
+        Id: Id
         Username: Username
-        DisplayName: string
         Groups: PermissionGroup list
         GrantedToken: GrantedToken
     }
@@ -104,15 +100,18 @@ module JWTToken =
 
             if jwtResult.Succedeed then
                 result {
+                    let! id =
+                        match jwtResult.Token.Payload.TryGetValue(UserCustomData.Id) with
+                        | true, id ->
+                            id.Value.ToString()
+                            |> Id.tryParse
+                            |> Result.ofOption MissingId
+                        | _ -> Error MissingId
+
                     let! username =
                         match jwtResult.Token.Payload.TryGetValue(UserCustomData.Username) with
                         | true, username -> Ok (username.Value.ToString())
                         | _ -> Error MissingUsername
-
-                    let! displayName =
-                        match jwtResult.Token.Payload.TryGetValue(UserCustomData.DisplayName) with
-                        | true, user -> Ok (user.Value.ToString())
-                        | _ -> Error MissingDisplayName
 
                     let! groups =
                         match jwtResult.Token.Payload.TryGetValue(UserCustomData.Groups) with
@@ -127,8 +126,8 @@ module JWTToken =
                         | _ -> Error MissingGroups
 
                     return GrantedTokenData {
+                        Id = id
                         Username = Username username
-                        DisplayName = displayName
                         Groups = groups
                         GrantedToken = GrantedToken jwtResult.Token
                     }
@@ -201,7 +200,7 @@ module JWTToken =
             descriptor.AddClaim(key, array)
             descriptor |> addCustomData rest
 
-    let create currentApp appKey customData =
+    let create currentApp appKey (userProfile: UserProfile) =
         use key = new SymmetricJwk(appKey |> JWTKey.value, SignatureAlgorithm.HmacSha256)
         let currentInstance = currentApp |> Instance.value
         let now = DateTime.UtcNow
@@ -215,7 +214,11 @@ module JWTToken =
             Issuer = currentInstance,
             Audience = currentInstance
         )
-        |> addCustomData customData
+        |> addCustomData [
+            CustomItem.String (UserCustomData.Id, userProfile.Id |> Id.value)
+            CustomItem.String (UserCustomData.Username, userProfile.Username |> Username.value)
+            CustomItem.Strings (UserCustomData.Groups, [])
+        ]
         |> JwtWriter().WriteTokenString
         |> JWTToken
 
@@ -223,11 +226,6 @@ module JWTToken =
         use key = new SymmetricJwk(appKey |> JWTKey.value, SignatureAlgorithm.HmacSha256)
 
         let (GrantedToken token) = userData.GrantedToken
-        let customData = [
-            CustomItem.String (UserCustomData.Username, userData.Username |> Username.value)
-            CustomItem.String (UserCustomData.DisplayName, userData.DisplayName)
-            CustomItem.Strings (UserCustomData.Groups, userData.Groups |> List.map PermissionGroup.value)
-        ]
 
         JwsDescriptor(
             SigningKey = key,
@@ -238,7 +236,11 @@ module JWTToken =
             Issuer = token.Issuer,
             Audience = (token.Audiences |> Seq.head)
         )
-        |> addCustomData customData
+        |> addCustomData [
+            CustomItem.String (UserCustomData.Id, userData.Id |> Id.value)
+            CustomItem.String (UserCustomData.Username, userData.Username |> Username.value)
+            CustomItem.Strings (UserCustomData.Groups, userData.Groups |> List.map PermissionGroup.value)
+        ]
         |> JwtWriter().WriteTokenString
         |> JWTToken
 
@@ -246,6 +248,7 @@ module JWTToken =
         let! (GrantedTokenData user) = token |> readUserData currentApp key
 
         return {
+            Id = user.Id
             Username = user.Username
             Token = token
         }

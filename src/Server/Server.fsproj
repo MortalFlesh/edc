@@ -48,19 +48,18 @@
 
         <!-- Database -->
         <Compile Include="Database/CloudStorage.fs" />
-        <Compile Include="Database/LocalMysql.fs" />
-        <Compile Include="Database/AzureSql.fs" />
 
         <!-- Api -->
 
         <!-- Command -->
         <Compile Include="Command/Command.fs" />
         <Compile Include="Command/Items.fs" />
+        <Compile Include="Command/Users.fs" />
         
         <!-- Query -->
         <Compile Include="Query/Query.fs" />
         <Compile Include="Query/Items.fs" />
-        <!-- <Compile Include="Query/PersonTest.fs" /> -->
+        <Compile Include="Query/Users.fs" />
 
         <!-- Application & Security -->
         <Compile Include="Application/Application.fs" />

@@ -19,8 +19,14 @@ type Message =
 // Security
 //
 
+type Email = Email of string
 type Username = Username of string
 type Password = Password of string
+
+[<RequireQualifiedAccess>]
+module Email =
+    let empty = Email ""
+    let value (Email email) = email
 
 [<RequireQualifiedAccess>]
 module Username =
@@ -371,6 +377,7 @@ type SecuredAsyncResult<'Success, 'Error> = AsyncResult<RenewedToken * 'Success,
 /// to learn more, read the docs at https://zaid-ajaj.github.io/Fable.Remoting/src/basics.html
 type IEdcApi = {
     // Public actions
+    Join: Email * Username * Password -> AsyncResult<User, ErrorMessage>
     Login: Username * Password -> AsyncResult<User, ErrorMessage>
 
     LoadProfiler: Profiler.Token option -> Async<Profiler.Toolbar option>
