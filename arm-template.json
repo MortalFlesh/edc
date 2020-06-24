@@ -381,6 +381,11 @@
                             "routeConfiguration": {
                                 "@odata.type": "#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration",
                                 "forwardingProtocol": "HttpsOnly",
+                                "cacheConfiguration": {
+                                    "queryParameterStripDirective": "StripNone",
+                                    "dynamicCompression": "Enabled",
+                                    "cacheDuration": "PT1H"
+                                },
                                 "backendPool": {
                                     "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/BackendPools/', variables('cdn'))]"
                                 }
