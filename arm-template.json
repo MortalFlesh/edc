@@ -1,8 +1,11 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "environment": {
+        "context": {
+            "type": "string"
+        },
+        "purpose": {
             "type": "string"
         },
         "location": {
@@ -10,17 +13,389 @@
         },
         "pricingTier": {
             "type": "string"
+        },
+        "tenantId": {
+            "type": "string"
+        },
+        "personalId": {
+            "type": "string"
+        },
+        "mainDomainHost": {
+            "type": "string"
         }
     },
     "variables": {
-        "environment": "[toLower(parameters('environment'))]",
-        "prefix": "[concat('safe-', variables('environment'))]",
+        "context": "[toLower(parameters('context'))]",
+        "purpose": "[toLower(parameters('purpose'))]",
+        "prefix": "[concat(variables('context'), '-', variables('purpose'))]",
         "appServicePlan": "[concat(variables('prefix'), '-web-host')]",
         "web": "[concat(variables('prefix'), '-web')]",
-        "storage": "[concat('safe', variables('environment'), 'storage')]",
-        "insights": "[concat(variables('prefix'), '-insights')]"
+        "storage": "[concat(variables('context'), variables('purpose'), 'storage')]",
+        "insights": "[concat(variables('prefix'), '-insights')]",
+        "cdn": "[concat(variables('prefix'), '-cdn')]",
+        "kv": "[concat(variables('prefix'), '-kv')]",
+        "frontDoors": "[concat(variables('prefix'), '-ingress')]",
+        "publicAzureHost": "[concat(variables('web'), '.azurewebsites.net')]",
+        "publicAzureCdnHost": "[concat(variables('cdn'), '.azureedge.net')]",
+        "mainDomainName": "[replace(parameters('mainDomainHost'), '.', '-')]"
     },
     "resources": [
+        {
+            "type": "Microsoft.Cdn/profiles",
+            "apiVersion": "2019-12-31",
+            "name": "[variables('cdn')]",
+            "location": "Global",
+            "sku": {
+                "name": "Standard_Microsoft"
+            },
+            "properties": {},
+            "tags": {
+                "[parameters('context')]": "cdn"
+            }
+        },
+        {
+            "type": "Microsoft.Cdn/profiles/endpoints",
+            "apiVersion": "2019-12-31",
+            "name": "[concat(variables('cdn'), '/', variables('cdn'))]",
+            "location": "Global",
+            "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', variables('cdn'))]"
+            ],
+            "properties": {
+                "originHostHeader": "[variables('publicAzureHost')]",
+                "isHttpAllowed": false,
+                "isHttpsAllowed": true,
+                "queryStringCachingBehavior": "IgnoreQueryString",
+                "origins": [
+                    {
+                        "name": "[concat(variables('mainDomainName'), '-cdn')]",
+                        "properties": {
+                            "hostName": "[variables('publicAzureHost')]",
+                            "httpPort": 80,
+                            "httpsPort": 443,
+                            "priority": 1,
+                            "weight": 1000,
+                            "enabled": true
+                        }
+                    }
+                ],
+                "originGroups": [],
+                "contentTypesToCompress": [
+                    "application/eot",
+                    "application/font",
+                    "application/font-sfnt",
+                    "application/javascript",
+                    "application/json",
+                    "application/opentype",
+                    "application/otf",
+                    "application/pkcs7-mime",
+                    "application/truetype",
+                    "application/ttf",
+                    "application/vnd.ms-fontobject",
+                    "application/xhtml+xml",
+                    "application/xml",
+                    "application/xml+rss",
+                    "application/x-font-opentype",
+                    "application/x-font-truetype",
+                    "application/x-font-ttf",
+                    "application/x-httpd-cgi",
+                    "application/x-javascript",
+                    "application/x-mpegurl",
+                    "application/x-opentype",
+                    "application/x-otf",
+                    "application/x-perl",
+                    "application/x-ttf",
+                    "font/eot",
+                    "font/ttf",
+                    "font/otf",
+                    "font/opentype",
+                    "image/svg+xml",
+                    "text/css",
+                    "text/csv",
+                    "text/html",
+                    "text/javascript",
+                    "text/js",
+                    "text/plain",
+                    "text/richtext",
+                    "text/tab-separated-values",
+                    "text/xml",
+                    "text/x-script",
+                    "text/x-component",
+                    "text/x-java-source"
+                ],
+                "isCompressionEnabled": true,
+                "geoFilters": []
+            }
+        },
+        {
+            "type": "Microsoft.KeyVault/vaults",
+            "name": "[variables('kv')]",
+            "apiVersion": "2016-10-01",
+            "location": "[parameters('location')]",
+            "tags": {
+                "[parameters('context')]": "kv"
+            },
+            "properties": {
+                "enabledForDeployment": true,
+                "enabledForTemplateDeployment": true,
+                "enabledForDiskEncryption": true,
+                "tenantId": "[parameters('tenantId')]",
+                "accessPolicies": [
+                    {
+                        "tenantId": "[parameters('tenantId')]",
+                        "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('web')), '2019-08-01', 'full').identity.principalId]",
+                        "permissions": {
+                            "keys": [],
+                            "secrets": [
+                                "Get",
+                                "List"
+                            ],
+                            "certificates": []
+                        }
+                    },
+                    {
+                        "tenantId": "[parameters('tenantId')]",
+                        "objectId": "[parameters('personalId')]",
+                        "permissions": {
+                            "keys": [
+                                "Get",
+                                "List",
+                                "Update",
+                                "Create",
+                                "Import",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore"
+                            ],
+                            "secrets": [
+                                "Get",
+                                "List",
+                                "Set",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore"
+                            ],
+                            "certificates": [
+                                "Get",
+                                "List",
+                                "Update",
+                                "Create",
+                                "Import",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore",
+                                "ManageContacts",
+                                "ManageIssuers",
+                                "GetIssuers",
+                                "ListIssuers",
+                                "SetIssuers",
+                                "DeleteIssuers"
+                            ]
+                        }
+                    }
+                ],
+                "sku": {
+                    "name": "standard",
+                    "family": "A"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/frontdoors",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('frontDoors')]",
+            "location": "Global",
+            "properties": {
+                "resourceState": "Enabled",
+                "backendPools": [
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), concat('/BackendPools/', variables('web')))]",
+                        "name": "[variables('web')]",
+                        "properties": {
+                            "backends": [
+                                {
+                                    "address": "[variables('publicAzureHost')]",
+                                    "httpPort": 80,
+                                    "httpsPort": 443,
+                                    "priority": 1,
+                                    "weight": 50,
+                                    "backendHostHeader": "[variables('publicAzureHost')]",
+                                    "enabledState": "Enabled"
+                                }
+                            ],
+                            "healthProbeSettings": {
+                                "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/HealthProbeSettings/healthProbeSettings-1591796729898')]"
+                            },
+                            "loadBalancingSettings": {
+                                "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/LoadBalancingSettings/loadBalancingSettings-1591796729898')]"
+                            },
+                            "resourceState": "Enabled"
+                        }
+                    },
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/BackendPools/cdn-edc')]",
+                        "name": "[variables('cdn')]",
+                        "properties": {
+                            "backends": [
+                                {
+                                    "address": "[variables('publicAzureCdnHost')]",
+                                    "httpPort": 80,
+                                    "httpsPort": 443,
+                                    "priority": 1,
+                                    "weight": 50,
+                                    "backendHostHeader": "[variables('publicAzureCdnHost')]",
+                                    "enabledState": "Enabled"
+                                }
+                            ],
+                            "healthProbeSettings": {
+                                "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/HealthProbeSettings/healthProbeSettings-1591820689085')]"
+                            },
+                            "loadBalancingSettings": {
+                                "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/LoadBalancingSettings/loadBalancingSettings-1591820689085')]"
+                            },
+                            "resourceState": "Enabled"
+                        }
+                    }
+                ],
+                "healthProbeSettings": [
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/HealthProbeSettings/healthProbeSettings-1591796729898')]",
+                        "name": "healthProbeSettings-1591796729898",
+                        "properties": {
+                            "intervalInSeconds": 30,
+                            "path": "/",
+                            "protocol": "Https",
+                            "resourceState": "Enabled",
+                            "enabledState": "Enabled",
+                            "healthProbeMethod": "Get"
+                        }
+                    },
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/HealthProbeSettings/healthProbeSettings-1591820689085')]",
+                        "name": "healthProbeSettings-1591820689085",
+                        "properties": {
+                            "intervalInSeconds": 30,
+                            "path": "/",
+                            "protocol": "Https",
+                            "resourceState": "Enabled",
+                            "enabledState": "Enabled",
+                            "healthProbeMethod": "Head"
+                        }
+                    }
+                ],
+                "frontendEndpoints": [
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), concat('/FrontendEndpoints/', variables('frontDoors'), '-azurefd-net'))]",
+                        "name": "[concat(variables('frontDoors'), '-azurefd-net')]",
+                        "properties": {
+                            "hostName": "[concat(variables('frontDoors'), '.azurefd.net')]",
+                            "sessionAffinityEnabledState": "Disabled",
+                            "sessionAffinityTtlSeconds": 0,
+                            "resourceState": "Disabled"
+                        }
+                    },
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/FrontendEndpoints/', variables('mainDomainName'))]",
+                        "name": "[variables('mainDomainName')]",
+                        "properties": {
+                            "hostName": "[parameters('mainDomainHost')]",
+                            "sessionAffinityEnabledState": "Disabled",
+                            "sessionAffinityTtlSeconds": 0,
+                            "resourceState": "Enabled"
+                        }
+                    }
+                ],
+                "loadBalancingSettings": [
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/LoadBalancingSettings/loadBalancingSettings-1591796729898')]",
+                        "name": "loadBalancingSettings-1591796729898",
+                        "properties": {
+                            "additionalLatencyMilliseconds": 0,
+                            "sampleSize": 4,
+                            "successfulSamplesRequired": 2,
+                            "resourceState": "Enabled"
+                        }
+                    },
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/LoadBalancingSettings/loadBalancingSettings-1591820689085')]",
+                        "name": "loadBalancingSettings-1591820689085",
+                        "properties": {
+                            "additionalLatencyMilliseconds": 0,
+                            "sampleSize": 4,
+                            "successfulSamplesRequired": 2,
+                            "resourceState": "Enabled"
+                        }
+                    }
+                ],
+                "routingRules": [
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), concat('/RoutingRules/', variables('frontDoors'), '-web'))]",
+                        "name": "[concat(variables('frontDoors'), '-web')]",
+                        "properties": {
+                            "frontendEndpoints": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/FrontendEndpoints/', variables('mainDomainName'))]"
+                                }
+                            ],
+                            "acceptedProtocols": [
+                                "Http",
+                                "Https"
+                            ],
+                            "patternsToMatch": [
+                                "/",
+                                "/index.html",
+                                "/api/*"
+                            ],
+                            "enabledState": "Enabled",
+                            "resourceState": "Enabled",
+                            "routeConfiguration": {
+                                "@odata.type": "#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration",
+                                "forwardingProtocol": "HttpsOnly",
+                                "backendPool": {
+                                    "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), concat('/BackendPools/', variables('web')))]"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/RoutingRules/', variables('frontDoors'), '-cdn')]",
+                        "name": "[concat(variables('frontDoors'), '-cdn')]",
+                        "properties": {
+                            "frontendEndpoints": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/FrontendEndpoints/', variables('mainDomainName'))]"
+                                }
+                            ],
+                            "acceptedProtocols": [
+                                "Http",
+                                "Https"
+                            ],
+                            "patternsToMatch": [
+                                "/*"
+                            ],
+                            "enabledState": "Enabled",
+                            "resourceState": "Enabled",
+                            "routeConfiguration": {
+                                "@odata.type": "#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration",
+                                "forwardingProtocol": "HttpsOnly",
+                                "backendPool": {
+                                    "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontDoors')), '/BackendPools/', variables('cdn'))]"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "backendPoolsSettings": {
+                    "enforceCertificateNameCheck": "Enabled",
+                    "sendRecvTimeoutSeconds": 30
+                },
+                "enabledState": "Enabled",
+                "friendlyName": "[variables('frontDoors')]"
+            }
+        },
         {
             "type": "Microsoft.Insights/components",
             "kind": "web",
@@ -57,7 +432,7 @@
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
             "properties": {
-                "name": "[variables('appserviceplan')]",
+                "name": "[variables('appServicePlan')]",
                 "perSiteScaling": false,
                 "reserved": false
             }
@@ -85,7 +460,7 @@
                         },
                         {
                             "name": "INSTANCE",
-                            "value": "mf-edc-azure"
+                            "value": "[concat(variables('context'), '-', variables('purpose'), '-azure')]"
                         },
                         {
                             "name": "VERBOSITY",
@@ -97,7 +472,7 @@
                         },
                         {
                             "name": "KEY_VAULT_NAME",
-                            "value": "edc-kv"
+                            "value": "[variables('kv')]"
                         }
                     ]
                 }
@@ -107,6 +482,9 @@
                 "[resourceId('Microsoft.Storage/storageAccounts/', variables('storage'))]",
                 "[resourceId('Microsoft.Insights/components/', variables('insights'))]"
             ],
+            "identity": {
+                "type": "SystemAssigned"
+            },
             "resources": [
                 {
                     "apiVersion": "2016-08-01",

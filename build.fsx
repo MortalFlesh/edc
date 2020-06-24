@@ -26,7 +26,7 @@ type ToolDir =
     | Local of string
 
 // ========================================================================================================
-// === F# / SAFE app fake build with Azure ======================================================== 1.0.0 =
+// === F# / SAFE app fake build with Azure ======================================================== 1.1.0 =
 // --------------------------------------------------------------------------------------------------------
 // Options:
 //  - no-lint    - lint will be executed, but the result is not validated
@@ -44,6 +44,7 @@ type ToolDir =
 
 let project = "MF.EDC"
 let summary = "GUI for configuration of EDC sets"
+let context = "edc"
 
 let version =
     "RELEASE_NOTES.md"
@@ -335,17 +336,18 @@ type ArmOutput =
 let mutable deploymentOutputs : ArmOutput option = None
 
 Target.create "ArmTemplate" (fun _ ->
-    let environment = Environment.environVarOrDefault "environment" (Guid.NewGuid().ToString().ToLower().Split '-' |> Array.head)
+    let purpose = Environment.environVarOrDefault "purpose" (Guid.NewGuid().ToString().ToLower().Split '-' |> Array.head)
     let armTemplate = @"arm-template.json"
-    let resourceGroupName = "safe-" + environment
+    let resourceGroupName = sprintf "%s-%s" context purpose
+
+    let tenantId = try Environment.environVarOrNone "tenantId" |> Option.map Guid.Parse with _ -> failwith "Invalid TenantId ID. This should be the Tenant ID of an application registered in Azure with permission to create resources in your subscription."
+    let personalId = try Environment.environVarOrNone "personalId" |> Option.map Guid.Parse with _ -> failwith "Invalid Personal ID. This should be the ID of an admin accessing a kv."
+    let mainDomainHost = try Environment.environVarOrNone "mainDomainHost" with _ -> failwith "Invalid Main domain host. This should be the custom domain, where your application will be accessed."
 
     let authCtx =
         // You can safely replace these with your own subscription and client IDs hard-coded into this script.
         let subscriptionId = try Environment.environVar "subscriptionId" |> Guid.Parse with _ -> failwith "Invalid Subscription ID. This should be your Azure Subscription ID."
         let clientId = try Environment.environVar "clientId" |> Guid.Parse with _ -> failwith "Invalid Client ID. This should be the Client ID of an application registered in Azure with permission to create resources in your subscription."
-        let tenantId =
-            try Environment.environVarOrNone "tenantId" |> Option.map Guid.Parse
-            with _ -> failwith "Invalid TenantId ID. This should be the Tenant ID of an application registered in Azure with permission to create resources in your subscription."
 
         Trace.tracefn "Deploying template '%s' to resource group '%s' in subscription '%O'..." armTemplate resourceGroupName subscriptionId
         subscriptionId
@@ -359,10 +361,15 @@ Target.create "ArmTemplate" (fun _ ->
           ResourceGroup = New(resourceGroupName, Region.Create location)
           ArmTemplate = IO.File.ReadAllText armTemplate
           Parameters =
-              Simple
-                  [ "environment", ArmString environment
-                    "location", ArmString location
-                    "pricingTier", ArmString pricingTier ]
+              Simple [
+                  "context", ArmString context
+                  "purpose", ArmString purpose
+                  "location", ArmString location
+                  "tenantId", ArmString (tenantId |> Option.map string |> Option.defaultValue "")
+                  "personalId", ArmString (personalId |> Option.map string |> Option.defaultValue "")
+                  "mainDomainHost", ArmString (mainDomainHost |> Option.defaultValue "")
+                  "pricingTier", ArmString pricingTier
+              ]
           DeploymentMode = Incremental }
 
     deployment

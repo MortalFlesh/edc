@@ -1,12 +1,26 @@
 EDC Configurator
 ================
 
+[![Build Status](https://dev.azure.com/MortalFlesh/edc/_apis/build/status/MortalFlesh.edc)](https://dev.azure.com/MortalFlesh/edc/_build/latest?definitionId=1)
+[![Build Status](https://api.travis-ci.com/MortalFlesh/edc.svg?branch=master)](https://travis-ci.com/MortalFlesh/edc)
+
 > Web gui for create/manage EDC sets
+
+## Deployment
+- first add concrete values to `bin/release.sh`
+- run `bin/release.sh`
+    - it will build, pack and release your infrastructure and application
+- manual steps in Azure Portal (first release only)
+    - Enable HTTPS for custom domain in Front Door, since it can not be set in ARM template yet [see](https://stackoverflow.com/questions/58180861/enable-https-on-azure-front-door-custom-domain-with-arm-template-deployment).
+    - Add `profiler-token` value to your Key Vault
+    - Crate Tables in Cloud Storage (`Item`, `Product`, `User`, `Tag`, `Set`)
 
 ## Maintenance and self-notes
 
 ### SSL cert
-> https://medium.com/@marcmathijssen/add-ssl-to-azure-web-app-using-letsencrypt-9125c3fdfb03
+> In case of custom-domain with SSL (B1+ pricing)
+
+- see https://medium.com/@marcmathijssen/add-ssl-to-azure-web-app-using-letsencrypt-9125c3fdfb03
 - `sudo certbot certonly --preferred-challenges http -d myedc.cz --manual`
 - To success the acme challenge, use an in-app route and pass a value to db (*todo*)
 - `sudo openssl pkcs12 -export -out ./myedc.pfx -inkey /etc/letsencrypt/live/myedc.cz/privkey.pem -in /etc/letsencrypt/live/myedc.cz/cert.pem`
