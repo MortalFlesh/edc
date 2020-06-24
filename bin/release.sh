@@ -1,26 +1,32 @@
 #!/bin/bash
 
 # see https://safe-stack.github.io/docs/template-appservice/
-# todo
-#   - move this logic to build.fsx
-#   - depends on connectionStrings, ...
 
 #==========#
 # Defaults #
 #==========#
 
 LOCATION="westeurope"
-PRICING_TIER="D1"       
-# F1 - Free Shared (60 CPU minutes / day) 1 GB 1.00 G $0
-# D1 - Free Shared (60 CPU minutes / day) 1 GB 1.00 G $0 + Custom domains
+PRICING_TIER="F1"
+# F1 - Free Shared (60 CPU minutes / day) 1 GB Ram - Free
+# D1 - Free Shared (240 CPU minutes / day) 1 GB 1.00 + Custom domains (without SSL) - 8 Eur / month
+# B1 - Basic (A-series compute) 1.75 GB + Custom domains (+ SSL) + Up to 3 instances - 46.17 Eur / month
 
 #=======#
 # Azure #
 #=======#
 
-SUBSCRIPTION_ID="dfea7be2-a719-4e18-b045-886013276031"
-CLIENT_ID="415fb89b-4074-4532-b2ba-4c32c244ffa2"
-TENANT_ID="3d8f4aa4-6211-4c04-ba38-a6198f655cb0"
+echo "Fill values first, then remove this line and the exit!"
+exit
+
+SUBSCRIPTION_ID="<fill>"
+CLIENT_ID="<fill>"
+TENANT_ID="<fill>"
+
+PERSONAL_ID="<fill>" # for kv store, I dont know where to get it :D
+
+MAIN_DOMAIN="www.mydomain.foo"
+# Domain must have a `CNAME: $CONTEXT-$PURPOSE-ingress.azurefd.net`
 
 #=========#
 # Command #
@@ -32,7 +38,9 @@ TENANT_ID="3d8f4aa4-6211-4c04-ba38-a6198f655cb0"
     -e tenantId="$TENANT_ID" \
     -e location="$LOCATION"       \
     -e pricingTier="$PRICING_TIER" \
-    -e environment="prod" \
+    -e personalId="$PERSONAL_ID" \
+    -e mainDomainHost="$MAIN_DOMAIN" \
+    -e purpose="prod" \
     ;
 
 #==========#
