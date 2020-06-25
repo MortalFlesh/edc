@@ -131,10 +131,6 @@ let private navbarStart routing page =
 
         Navbar.Item.a [
             (* todo *)
-        ] [ str "Containers" ]
-
-        Navbar.Item.a [
-            (* todo *)
         ] [ str "Tags" ]
 
         Navbar.Item.a [
